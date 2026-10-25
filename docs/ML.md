@@ -38,6 +38,25 @@ Candidate-inclusive (all 44 test rows, CANDIDATE counted positive): champion
 F1 0.8085 / AUC 0.9509; vetting F1 0.8333 / AUC 0.9573; class-weight 0.8261 /
 0.9509; CNN 0.7586 / 0.6368.
 
+### Pre-registration for the v2 re-score
+
+A larger cache is downloading (900 targets). Before any v2 number exists, the
+rules for reading it are fixed here:
+
+1. Same four configs, same seeds, same threshold rule (validation F1). Only
+   `data.split_version` changes, from `v1` to `v2`; the cache is never rebuilt
+   with different labels.
+2. Same gate: F1 strictly greater than the champion, AUC not degraded, run
+   replayable. No margin tuning after seeing the result.
+3. One pre-declared success criterion: a challenger KEEP row on real data. A
+   second is champion F1 whose 95% interval is narrower than the v1 interval
+   (0.815-1.000) - more data should buy precision even if nothing is promoted.
+4. Forbidden: moving the decision threshold after seeing test, choosing the best
+   of several seeds, or comparing against a champion retrained on test-inclusive
+   data. Any of those turns the demo into a rehearsal.
+5. If no challenger keeps, the v2 champion stands and the REJECT rows ship with
+their diagnoses. A gate that only ever says yes is not a gate.
+
 ### Uncertainty (do not quote a bare F1)
 
 `python -m ml_sandbox.stability --predictions artifacts/<run>/predictions.csv`

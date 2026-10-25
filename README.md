@@ -90,7 +90,10 @@ python -m ml_sandbox.train --config ../runs/baseline_v1.json --out ../artifacts/
 # 3. train the CNN challenger
 python -m ml_sandbox.train --config ../runs/cnn_v1.json --out ../artifacts/cnn_v1
 
-# 4. tests (leakage, determinism, CLI contract, replay) - 59 tests
+# 4. uncertainty on a scored split (grouped bootstrap over host stars)
+python -m ml_sandbox.stability --predictions ../artifacts/baseline_live/predictions.csv
+
+# 5. tests (leakage, determinism, CLI contract, replay, gate, stability) - 64 tests
 pytest -q
 ```
 
