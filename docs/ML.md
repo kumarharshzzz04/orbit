@@ -38,6 +38,41 @@ Candidate-inclusive (all 44 test rows, CANDIDATE counted positive): champion
 F1 0.8085 / AUC 0.9509; vetting F1 0.8333 / AUC 0.9573; class-weight 0.8261 /
 0.9509; CNN 0.7586 / 0.6368.
 
+### Where the ceiling is (data-scaling check)
+
+Before spending the download budget we measured whether F1 is data-limited.
+Champion and challenger were retrained on stratified subsets of the **train**
+split only (three seeds per point, threshold chosen on validation, scored once on
+the frozen test split). Method: disposable script against a 297-target snapshot
+of cache v1; no split, config or registry row was touched.
+
+| Train rows | Champion F1 (min-max) | Champion AUC | Vetting F1 | Vetting AUC |
+|---|---|---|---|---|
+| 20 (10%) | 0.658 (0.533-0.774) | 0.770 | 0.769 | 0.831 |
+| 52 (25%) | 0.856 (0.786-0.903) | 0.933 | 0.862 | 0.933 |
+| 104 (50%) | 0.922 (0.903-0.933) | 0.967 | **0.933** | 0.967 |
+| 156 (75%) | 0.906 (0.889-0.933) | 0.970 | 0.929 | 0.979 |
+| 208 (100%) | 0.933 (0.933) | 0.984 | 0.933 | 0.996 |
+
+Two conclusions, both awkward and both useful:
+
+1. **The champion is not data-starved on these features.** F1 is flat from ~104
+training rows; doubling to 208 bought +0.011, which is inside the interval. More
+light curves of the same kind will mostly narrow the confidence interval, not
+lift F1. That is exactly what the v2 re-score is now expected to show, and it is
+pre-registered above.
+2. **The test split, not the model, is the limiting factor.** Both feature sets
+hit the same 14-TP / 2-FP ceiling at 104 rows. The two remaining errors are the
+shallow low-SNR signals diagnosed above; separating those needs centroid motion
+or difference imaging, a new data modality rather than more of the same photons.
+
+Threshold robustness on the validation split (full training set): every threshold
+in **0.94-0.97** is within 0.005 of the best validation F1 for the champion, and
+0.97-0.98 for the challenger. The 0.94 used in the live champion sits inside that
+plateau, so it is not a lucky spike - but the two false positives (p=0.995,
+p=0.951) also sit inside it, which is why the F1 gap cannot be closed by moving
+the threshold honestly.
+
 ### Pre-registration for the v2 re-score
 
 A larger cache is downloading (900 targets). Before any v2 number exists, the
