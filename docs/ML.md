@@ -55,7 +55,8 @@ diagnosis, which is exactly what the registry is for.
 Reproducibility: a clean-tree replay of `baseline_live` (config hash
 `f542d54c219bb85f7c3ee68d43f7f827dfc58d8f`) produced identical metrics, dataset
 fingerprint and split fingerprint. Wall time 0.6 s to train, 4.7 s for the CNN;
-downloads, not compute, are the budget.
+downloads, not compute, are the budget. `artifacts/replay_baseline_live/` holds
+that replay: it is **not** a candidate and must not get its own registry row.
 
 ## What exists
 
