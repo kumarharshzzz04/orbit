@@ -48,6 +48,36 @@ def test_different_seed_changes_the_fingerprint(tmp_path) -> None:
     assert first.dataset_fingerprint != second.dataset_fingerprint
 
 
+def test_live_build_downloads_each_host_once(tmp_path, monkeypatch) -> None:
+    frame = stub.make_stub_labels(n_targets=24, seed=5)
+    repeated = frame.groupby("host_star").size()
+    assert (repeated > 1).any(), "stub population should have multi-planet hosts"
+
+    calls: list[int] = []
+
+    def fake_download(kepid, download_dir=None):
+        calls.append(int(kepid))
+        time = np.arange(0.0, 120.0, 0.02)
+        flux = 1.0 + 0.001 * np.sin(time)
+        return time, flux
+
+    monkeypatch.setattr(cache.preprocess, "download_kepler_light_curve", fake_download)
+    report = cache.build_cache(
+        frame,
+        mode="live",
+        cache_dir=tmp_path / "cache",
+        n_bins=400,
+        seed=5,
+        strict=False,
+    )
+
+    assert report.new == len(frame)
+    expected = set(frame["kepid"].astype(int))
+    assert len(expected) < len(frame)
+    assert set(calls) == expected
+    assert len(calls) == len(expected)
+
+
 def test_rebuild_reuses_existing_targets(tmp_path) -> None:
     root = tmp_path / "data"
     first = build(root)
@@ -104,14 +134,11 @@ def test_tampered_arrays_are_caught(tmp_path) -> None:
 def test_live_build_with_fake_arrays_records_all_targets(tmp_path, monkeypatch) -> None:
     frame = stub.make_stub_labels(n_targets=20, seed=5)
 
-    def fake_target_arrays(row, *, mode, n_bins, seed, cache_dir):
-        assert mode == "live"
-        return (
-            np.full(n_bins, 0.999, dtype=np.float32),
-            np.arange(14, dtype=np.float32),
-        )
+    def fake_download(kepid, download_dir=None):
+        time = np.arange(0.0, 120.0, 0.02)
+        return time, np.ones(time.size, dtype=np.float64)
 
-    monkeypatch.setattr(cache, "_target_arrays", fake_target_arrays)
+    monkeypatch.setattr(cache.preprocess, "download_kepler_light_curve", fake_download)
     report = cache.build_cache(
         frame,
         mode="live",

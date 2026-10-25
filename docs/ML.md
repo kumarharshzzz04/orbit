@@ -37,7 +37,7 @@ backend/ml_sandbox/
   models/          baseline.py (sklearn GBM), cnn.py (PyTorch 1D CNN)
   train.py         CLI: train + evaluate + registry-shaped run record
   build_cache.py   CLI: build/resume the cache (stub or live)
-backend/tests/     58 tests: preprocessing, splits/leakage, metrics, cache, CLI, CNN
+backend/tests/     59 tests: preprocessing, splits/leakage, metrics, cache, CLI, CNN
 runs/              champion + challenger configs (stub and live)
 ```
 
@@ -84,8 +84,10 @@ white noise, outliers. False positives are eclipsing binaries: unequal odd/even
 depths and deep secondary eclipses. Builds in ~12 s on a laptop.
 
 **live** (network): KOI TAP query then lightkurve/MAST downloads, resumable and
-per-target. Failed downloads are recorded in `manifest.json.skipped` instead of
-killing the build. Requires the optional stack:
+per-target. Targets that share a host star reuse one download (KOI rows are
+planets, not stars), which avoids concurrent FITS writes and wasted bandwidth.
+Failed downloads are recorded in `manifest.json.skipped` instead of killing the
+build. Requires the optional stack:
 
 ```bash
 cd backend
@@ -97,7 +99,9 @@ python -m ml_sandbox.train --config ../runs/baseline_live.json --out ../artifact
 
 Measured on the dev network (2026-10-25, 12 targets): 546 s sequential vs
 186 s with `--workers 3`, and both builds produced the identical dataset
-fingerprint `9abe459480d07159bf305622110f8f61d8f4cc19`. A 1,500-target live cache
+fingerprint `9abe459480d07159bf305622110f8f61d8f4cc19`. A warm-cache rebuild
+with host-deduplicated downloads reproduced that fingerprint in 22 s. A
+1,500-target live cache
 is therefore roughly 6-7 hours at 3 workers (~20 s/target effective); a
 300-target demo subset is roughly 75-90 minutes. Plan the download budget
 accordingly, or use the 300-target fallback from the risk register.

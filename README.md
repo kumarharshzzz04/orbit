@@ -64,7 +64,7 @@ python -m ml_sandbox.train --config ../runs/baseline_v1.json --out ../artifacts/
 # 3. train the CNN challenger
 python -m ml_sandbox.train --config ../runs/cnn_v1.json --out ../artifacts/cnn_v1
 
-# 4. tests (leakage, determinism, CLI contract, replay) - 58 tests
+# 4. tests (leakage, determinism, CLI contract, replay) - 59 tests
 pytest -q
 ```
 
@@ -93,9 +93,10 @@ python -m ml_sandbox.train --config ../runs/baseline_live.json --out ../artifact
 ```
 
 The live path was smoke-tested on 12 real Kepler targets. Downloads are
-process-isolated (`--workers 3`): astroquery is not thread-safe. Measured ~20s per
-target effective; a 300-target demo subset is ~75-90 minutes, so plan the download
-budget (the full 1,500 is ~6-7 hours).
+process-isolated (`--workers 3`): astroquery is not thread-safe. Targets sharing a
+host star reuse one download, since KOI rows are planets rather than stars.
+Measured ~20s per target effective; a 300-target demo subset is ~75-90 minutes, so
+plan the download budget (the full 1,500 is ~6-7 hours).
 
 ## Contracts
 

@@ -298,8 +298,11 @@ def download_kepler_light_curve(
     if len(search) == 0:
         raise LightCurveUnavailable(f"no Kepler long-cadence data for KIC {kepid}")
 
+    download_kwargs = (
+        {"download_dir": str(download_dir)} if download_dir is not None else {}
+    )
     try:
-        collection = search.download_all(download_dir=str(download_dir))
+        collection = search.download_all(**download_kwargs)
     except Exception as exc:  # pragma: no cover - network path
         raise LightCurveUnavailable(
             f"MAST download failed for KIC {kepid}: {exc}"

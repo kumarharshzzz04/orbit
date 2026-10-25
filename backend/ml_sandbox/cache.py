@@ -298,6 +298,47 @@ def _live_download_worker(
     return preprocess.download_kepler_light_curve(kepid, download_dir=download_dir)
 
 
+def _group_pending_by_kepid(
+    pending: list[tuple[int, pd.Series, str, Path]],
+) -> dict[int, list[tuple[int, pd.Series, str, Path]]]:
+    """Group live targets by host so one download serves every planet.
+
+    KOI rows are planet candidates, not stars: several targets commonly share a
+    ``kepid``. Downloading them concurrently into the same MAST folder can
+    corrupt a FITS file, and downloading them sequentially wastes bandwidth.
+    """
+    groups: dict[int, list[tuple[int, pd.Series, str, Path]]] = {}
+    for item in pending:
+        try:
+            kepid = int(item[1]["kepid"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise CacheError(
+                f"target {item[2]} has no usable kepid for live download"
+            ) from exc
+        groups.setdefault(kepid, []).append(item)
+    return groups
+
+
+def _record_live_group(
+    items: list[tuple[int, pd.Series, str, Path]],
+    time_values: np.ndarray,
+    flux_values: np.ndarray,
+    *,
+    n_bins: int,
+    record: Callable[..., None],
+) -> None:
+    """Fold one downloaded light curve for every target on that host."""
+    for item in items:
+        try:
+            flux, feature_vector = _fold_and_features(
+                item[1], time_values, flux_values, n_bins=n_bins
+            )
+        except Exception as exc:  # noqa: BLE001 - recorded per target
+            record(item, None, None, exc)
+        else:
+            record(item, flux, feature_vector, None)
+
+
 def _fold_and_features(
     row: pd.Series,
     time_values: np.ndarray,
@@ -356,7 +397,8 @@ def build_cache(
     Existing entries are reused unless ``rebuild`` is set. In live mode failed
     downloads are recorded and skipped (``strict=False``); in stub mode a
     failure is a bug and raises. Live downloads may run in a bounded process
-    pool (MAST is the bottleneck: ~45 s/target sequential on the dev network).
+    pool (MAST is the bottleneck: ~45 s/target sequential on the dev network),
+    and every target sharing a host star reuses one download.
     """
     started = time.perf_counter()
     cache_path = Path(cache_dir)
@@ -487,25 +529,47 @@ def build_cache(
             )
 
     bounded_workers = max(1, min(int(workers), 8))
-    if pending and bounded_workers > 1 and mode == "live" and not strict:
+    if mode == "live" and pending:
+        groups = _group_pending_by_kepid(pending)
         mast_dir = str((cache_path.parent / "mast").resolve())
-        with ProcessPoolExecutor(max_workers=bounded_workers) as pool:
-            futures = {
-                pool.submit(
-                    _live_download_worker, int(item[1]["kepid"]), mast_dir
-                ): item
-                for item in pending
-            }
-            for future in as_completed(futures):
-                item = futures[future]
+        if bounded_workers > 1 and not strict:
+            with ProcessPoolExecutor(max_workers=bounded_workers) as pool:
+                futures = {
+                    pool.submit(_live_download_worker, kepid, mast_dir): (kepid, items)
+                    for kepid, items in groups.items()
+                }
+                for future in as_completed(futures):
+                    kepid, items = futures[future]
+                    try:
+                        time_values, flux_values = future.result()
+                    except Exception as exc:  # noqa: BLE001 - recorded per target
+                        for item in items:
+                            record(item, None, None, exc)
+                    else:
+                        _record_live_group(
+                            items,
+                            time_values,
+                            flux_values,
+                            n_bins=n_bins,
+                            record=record,
+                        )
+        else:
+            for kepid, items in groups.items():
                 try:
-                    time_values, flux_values = future.result()
-                    flux, feature_vector = _fold_and_features(
-                        item[1], time_values, flux_values, n_bins=n_bins
+                    time_values, flux_values = preprocess.download_kepler_light_curve(
+                        kepid, download_dir=mast_dir
                     )
-                    record(item, flux, feature_vector, None)
                 except Exception as exc:  # noqa: BLE001 - recorded per target
-                    record(item, None, None, exc)
+                    for item in items:
+                        record(item, None, None, exc)
+                else:
+                    _record_live_group(
+                        items,
+                        time_values,
+                        flux_values,
+                        n_bins=n_bins,
+                        record=record,
+                    )
     else:
         for item in pending:
             record(*process(item))
