@@ -15,7 +15,7 @@ import time
 from collections.abc import Callable
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -616,7 +616,7 @@ def _manifest_payload(
     skipped: dict[str, str],
     created_at: str | None,
 ) -> dict[str, Any]:
-    now = datetime.now(UTC).isoformat(timespec="seconds")
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
     return {
         "schema_version": SCHEMA_VERSION,
         "mode": mode,

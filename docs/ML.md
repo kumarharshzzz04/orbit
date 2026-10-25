@@ -366,6 +366,36 @@ path, `verdict: "PENDING"`, `diagnosis: null`, plus the full effective config.
 **Commit before producing demo artifacts** or the gate will rightly call the run
 not replayable.
 
+## NVIDIA GPU path (optional, measured)
+
+The CNN accepts `training.device: "cuda"`; the GBM is sklearn and stays CPU. The
+frozen reference runs are CPU, and CPU is still the default so existing configs
+keep their hashes and their bit-for-bit replay.
+
+Measured on 2026-10-25 (RTX 4050 Laptop, 6 GB, torch 2.5.1+cu121, 1,500 stub
+targets, 400 bins, 64k-parameter CNN, identical config and seed):
+
+| Device | CNN training time | Test F1 | Test AUC |
+|---|---|---|---|
+| cpu | 11.97 s | 0.8256 | 0.8989 |
+| cuda | 2.36 s | 0.8256 | 0.8783 |
+
+5.1x faster training, same F1; AUC moves slightly because CUDA kernels are not
+bit-reproducible (determinism is enabled with `warn_only` on GPU, and
+`CUBLAS_WORKSPACE_CONFIG=:4096:8` is set before the first GPU op). A GPU run is a
+distinct config hash, so it never overwrites a CPU reference result.
+
+```bash
+# conda env with a CUDA torch build (this project's tf_gpu env has torch 2.5.1+cu121)
+python -m ml_sandbox.train --config ../runs/cnn_live.json --out ../artifacts/cnn_live_cuda
+# add "device": "cuda" under training in the config first
+```
+
+Why it is not the default: at 208-630 training rows a CNN epoch is seconds, and
+the pipeline is dominated by MAST downloads, not compute. GPU capacity only starts
+to matter for a wide CNN on raw cadence data - which is a post-hackathon direction,
+not something to claim as a speedup we depend on.
+
 ## Metrics and the gate
 
 accuracy, precision, recall, F1, ROC-AUC + confusion matrix on the same frozen test

@@ -13,7 +13,7 @@ import hashlib
 import json
 import os
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -216,7 +216,7 @@ def freeze_split(
     payload: dict[str, Any] = {
         "version": version,
         "seed": seed,
-        "created_at": datetime.now(UTC).isoformat(timespec="seconds"),
+        "created_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "dataset_fingerprint": dataset_fingerprint,
         "fingerprint": fingerprint,
         "counts": counts,

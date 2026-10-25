@@ -79,6 +79,7 @@ _TRAINING_KEYS = {
         "weight_decay",
         "patience",
         "num_threads",
+        "device",
         "augmentation",
     },
 }
@@ -412,6 +413,14 @@ def _validate_training(model: str, raw: dict[str, Any]) -> dict[str, Any]:
         _unknown_keys(
             augmentation, {"phase_shift", "noise_ppm"}, "training.augmentation"
         )
+        device = _string(training.get("device", "cpu"), "training.device")
+        if device not in {"cpu", "cuda"}:
+            _fail("training.device must be one of cpu, cuda")
+        if device == "cpu":
+            # Absent by default so existing configs keep their config hash.
+            training.pop("device", None)
+        else:
+            training["device"] = device
         augmentation.setdefault("phase_shift", False)
         augmentation.setdefault("noise_ppm", 0.0)
         augmentation["phase_shift"] = _boolean(

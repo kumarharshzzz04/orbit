@@ -16,7 +16,7 @@ import subprocess
 import sys
 import time
 import traceback
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -362,7 +362,7 @@ def run(
             and data.split_fingerprint
             and config_hash
         )
-        created_at = datetime.now(UTC).isoformat(timespec="seconds")
+        created_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
         duration = round(time.perf_counter() - started, 3)
         run_record = {
             "id": _run_dir_name(destination),

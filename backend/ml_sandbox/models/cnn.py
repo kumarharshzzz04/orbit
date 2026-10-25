@@ -7,6 +7,7 @@ training with BCEWithLogitsLoss; inference applies sigmoid.
 
 from __future__ import annotations
 
+import os
 import time
 from pathlib import Path
 
@@ -71,13 +72,14 @@ def _predict(
     batch_size: int = 256,
 ) -> np.ndarray:
     model.eval()
+    device = next(model.parameters()).device
     probabilities: list[np.ndarray] = []
     with torch.no_grad():
         for start in range(0, len(scaled_flux), batch_size):
             batch = torch.as_tensor(
                 scaled_flux[start : start + batch_size][:, None, :],
                 dtype=torch.float32,
-            )
+            ).to(device)
             logits = model(batch)
             probabilities.append(torch.sigmoid(logits).cpu().numpy())
     if not probabilities:
@@ -131,14 +133,30 @@ def fit_predict(
     params = cfg.model_params
     training = cfg.training
     seed = cfg.seed
+    device_name = str(training.get("device", "cpu"))
+    if device_name == "cuda":
+        # cuBLAS needs this for deterministic kernels on CUDA >= 10.2. Set before
+        # any GPU work so the workspace is honoured.
+        os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
     torch.manual_seed(seed)
     torch.set_num_threads(int(training["num_threads"]))
     try:
-        torch.use_deterministic_algorithms(True)
-    except RuntimeError:
+        # warn_only on GPU: some CUDA kernels have no deterministic equivalent,
+        # and a hard failure would make the GPU path unusable. GPU runs are
+        # recorded as such and are not claimed to be bit-reproducible.
+        torch.use_deterministic_algorithms(True, warn_only=(device_name == "cuda"))
+    except (RuntimeError, TypeError):
         # Older torch builds do not know every deterministic kernel; the seed
         # and single-thread setting still keep CPU runs stable.
         pass
+
+    if device_name not in {"cpu", "cuda"}:
+        raise ValueError(f"training.device must be 'cpu' or 'cuda', got {device_name!r}")
+    if device_name == "cuda" and not torch.cuda.is_available():
+        raise RuntimeError("training.device='cuda' but torch.cuda.is_available() is False")
+    device = torch.device(device_name)
+    if device_name == "cuda":
+        torch.cuda.manual_seed_all(seed)
 
     architecture = {
         "channels": [int(value) for value in params["channels"]],
@@ -146,7 +164,7 @@ def fit_predict(
         "dropout": float(params["dropout"]),
         "fc_dim": int(params["fc_dim"]),
     }
-    model = TransitCNN(**architecture)
+    model = TransitCNN(**architecture).to(device)
     n_params = int(sum(parameter.numel() for parameter in model.parameters()))
 
     x_train = cnn_input(train.flux)
@@ -157,7 +175,7 @@ def fit_predict(
 
     pos_weight = _pos_weight(train.labels, params.get("class_weight"))
     criterion = nn.BCEWithLogitsLoss(
-        pos_weight=torch.tensor([pos_weight], dtype=torch.float32)
+        pos_weight=torch.tensor([pos_weight], dtype=torch.float32, device=device)
     )
     optimizer = torch.optim.Adam(
         model.parameters(),
@@ -198,8 +216,12 @@ def fit_predict(
                 phase_shift=phase_shift,
                 noise_ppm=noise_ppm,
             )
-            inputs = torch.as_tensor(batch[:, None, :], dtype=torch.float32)
-            targets = torch.as_tensor(y_train[indices], dtype=torch.float32)
+            inputs = torch.as_tensor(
+                batch[:, None, :], dtype=torch.float32, device=device
+            )
+            targets = torch.as_tensor(
+                y_train[indices], dtype=torch.float32, device=device
+            )
             optimizer.zero_grad(set_to_none=True)
             logits = model(inputs)
             loss = criterion(logits, targets)

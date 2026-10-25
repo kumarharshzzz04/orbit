@@ -12,7 +12,7 @@ import json
 import urllib.parse
 import urllib.request
 import warnings
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pandas as pd
@@ -112,7 +112,7 @@ def fetch_koi_table(
     metadata = {
         "query": query,
         "sha1": hashlib.sha1(body).hexdigest(),
-        "fetched_at": datetime.now(UTC).isoformat(timespec="seconds"),
+        "fetched_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "bytes": len(body),
     }
     meta_path.write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
