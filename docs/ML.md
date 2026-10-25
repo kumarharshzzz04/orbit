@@ -38,6 +38,22 @@ Candidate-inclusive (all 44 test rows, CANDIDATE counted positive): champion
 F1 0.8085 / AUC 0.9509; vetting F1 0.8333 / AUC 0.9573; class-weight 0.8261 /
 0.9509; CNN 0.7586 / 0.6368.
 
+### Uncertainty (do not quote a bare F1)
+
+`python -m ml_sandbox.stability --predictions artifacts/<run>/predictions.csv`
+resamples whole host stars (the split unit) 2,000 times and reports a 95%
+percentile interval, then a JSON line. On the live champion:
+
+| Metric | Point | 95% CI |
+|---|---|---|
+| F1 | 0.9333 | 0.8148 - 1.0000 |
+| ROC-AUC | 0.9841 | 0.9412 - 1.0000 |
+
+n=32 primary rows, 14 positives, 32 host groups. The interval is wide because the
+test split is small; that is the honest precision of the demo claim. Quote the
+interval in the UI and the pitch, and treat any challenger margin smaller than
+the interval width as unresolved rather than as a win.
+
 The champion's two false positives are **K03492.01** (p=0.9954) and
 **K04641.01** (p=0.9505); every other test false positive scores below 0.14.
 Both sit just above the val-selected threshold of 0.94 (the vetting challenger at
