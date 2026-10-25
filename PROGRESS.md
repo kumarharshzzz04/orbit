@@ -16,6 +16,26 @@ NOTE:    decisions, surprises, gotchas the next person needs
 
 ---
 
+## 2026-10-25 17:15 - Member C (ML)
+DONE: two independent checks on the frozen 297-target live set, both done before v2 exists.
+      (1) Host-grouped 5-fold CV (threshold fixed from the original validation split, so no
+      fold self-selects): champion F1 0.801 +/- 0.036, AUC 0.934 +/- 0.030, pooled OOF
+      0.800 over 234 primary rows / 89 positives (120 TN, 25 FP, 13 FN, 76 TP); vetting
+      challenger 0.810 +/- 0.072, AUC 0.946 +/- 0.037. (2) Data-scaling curve on stratified
+      training subsets: F1 is flat from ~104 rows (0.922) to 208 (0.933), so more light
+      curves buy precision, not F1. Both written into docs/ML.md with method and caveats.
+NEXT: finish the 900-target cache (369/900 at 17:05, ~2h), auto re-score on split v2, then
+      update the frozen report with the v2 verdicts and intervals.
+BLOCKED: none
+NOTE: the 0.933 frozen-split F1 is an easy draw - the same model scores 0.80 out-of-fold on
+      unseen hosts. Always quote both, or the CV pair alone. The 0.94 threshold is not
+      cherry-picked (validation plateau 0.94-0.97), but both false positives sit inside that
+      plateau, so moving it honestly cannot close the gap. Remaining errors are shallow
+      low-SNR signals; separating them needs centroid motion, a new data modality, not more
+      Kepler light curves.
+
+---
+
 ## 2026-10-25 16:45 - Member C (ML)
 DONE: real-data ML is frozen. 297 live Kepler targets cached (300 requested, 3 skipped,
       294 hosts (145 FP / 89 CONFIRMED / 63 CANDIDATE), 2,376 s at 3 workers; dataset fp 3826e7f3..., live split v1 fp

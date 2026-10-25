@@ -15,17 +15,19 @@ LAST UPDATED:   2026-10-25 16:45  (by C; owner A to confirm)
 SYSTEM STATE:   [ ] not started   [x] scaffolding   [ ] walking skeleton (CP-1)
                 [x] ML frozen (live scored)      [ ] feature complete (CP-2)
 WORKING:        ML sandbox frozen on real data: 297 live Kepler targets (300 requested,
-                3 skipped) + 1,500 stub; 59 tests; live champion F1 0.933/AUC 0.984
-                (n=32 test, 14 pos); live vetting challenger F1 0.933/AUC 0.996 -> REJECT;
-                live class-weight 0.929, CNN 0.737 -> REJECT; same-config replay reproduced
-                every metric; shared fixtures under docs/fixtures/
+                3 skipped) + 1,500 stub; 64 tests; live champion F1 0.933/AUC 0.984 on the
+                32-row frozen split, and the honest generalization estimate is F1 0.80
+                +/- 0.04 / AUC 0.934 from host-grouped 5-fold CV over all 297; live
+                vetting challenger 0.933/0.996 -> REJECT; class-weight 0.929, CNN 0.737
+                -> REJECT; replay reproduced every metric; fixtures under docs/fixtures/
 BROKEN:         backend app/registry, agent loop, frontend, active CI (not built yet)
 NEXT UP:        B: FastAPI + registry + promote(); A: orchestrator loop;
                 D: Vite UI against docs/fixtures/ws_events.jsonl; C: hand B the four
                 live run_record.json rows (verdicts PENDING)
 DEMO RISK:      only 297 of 1,500 live targets; the live gate has no KEEP yet (stub run
-                supplies the KEEP example); ci.yml still at repo root; 32-row live test
-                means one flipped target moves F1 ~0.03 - always quote n
+                supplies the KEEP example); ci.yml still at repo root; the 32-row live
+                split reads 0.93 while CV says 0.80, so never quote 0.933 without n and
+                the CV number; more data buys precision, not F1 (data-scaling curve)
 ```
 
 ## 2. Owners (one owner per module, at any moment)

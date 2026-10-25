@@ -12,7 +12,7 @@ learning on Kepler photometry - we aim for a credible demo model, not SOTA.
 | Gate | State |
 |---|---|
 | CP-1 data | **Stub**: 1,500 deterministic targets cached. **Live**: 297 real Kepler targets cached from a 300-target request (3 skipped, resumable), 294 host stars (145 FALSE POSITIVE / 89 CONFIRMED / 63 CANDIDATE), 2,376 s at 3 workers. |
-| CP-1 baseline | **Working**: stub F1 0.837, AUC 0.899 (n=224). **Live** F1 0.933, AUC 0.984, accuracy 0.938 on the frozen live test split (n=32 primary, 44 candidate-inclusive). |
+| CP-1 baseline | **Working**: stub F1 0.837, AUC 0.899 (n=224). **Live** F1 0.933, AUC 0.984 on the 32-row frozen test split, but **0.80 ± 0.04 F1 / 0.934 AUC on host-grouped 5-fold CV** - the CV number is the generalization estimate. |
 | CP-2 CNN | **Working**: stub F1 0.821. **Live** F1 0.737, AUC 0.706 - underfits at 208 training rows. Honest negative result. |
 | CP-2 challenger | **Stub**: vetting-feature GBM F1 0.930, AUC 0.983 -> clears the gate. **Live**: vetting features tie the champion on F1 (0.9333) with higher AUC (0.996), so the strict gate REJECTS it; class-weight 0.929 and CNN 0.737 also fail the F1 bar. |
 | CP-2 gate | ML emits PENDING, registry-shaped `run_record.json`; `services/registry.promote()` (Member B) is still the only decision point. |
@@ -37,6 +37,30 @@ scored separately). Same seed, same harness, same threshold rule for all four.
 Candidate-inclusive (all 44 test rows, CANDIDATE counted positive): champion
 F1 0.8085 / AUC 0.9509; vetting F1 0.8333 / AUC 0.9573; class-weight 0.8261 /
 0.9509; CNN 0.7586 / 0.6368.
+
+### Second estimate: host-grouped 5-fold cross-validation
+
+The 32-row test split is one draw. A 5-fold, host-grouped CV over all 297 targets
+(no fold assignment touches the frozen split; hyperparameters unchanged; each fold
+scored at the threshold already chosen on the original validation split, so no
+fold picks its own) gives a better estimate of unseen-host performance:
+
+| Feature set | 5-fold F1 | 5-fold AUC | Pooled out-of-fold F1 (n=234, 89 pos) |
+|---|---|---|---|
+| `catalog_v1` (champion) | 0.801 ± 0.036 | 0.934 ± 0.030 | 0.800 (120 TN, 25 FP, 13 FN, 76 TP) |
+| `vetting_v1` (challenger) | 0.810 ± 0.072 | 0.946 ± 0.037 | 0.810 (118 TN, 27 FP, 10 FN, 79 TP) |
+
+**Read this before quoting 0.933 anywhere.** The frozen test split is easier than
+the population: 2 false positives in 32 primary rows versus 25 in 234 out-of-fold
+rows. The honest generalization statement is **F1 ≈ 0.80 on unseen host stars**,
+and the 0.93 is a property of this particular 32-row draw, not of the model.
+The gate still runs on the frozen split - that is its job and changing it now
+would be post-hoc - but every slide should show the CV number next to the split
+number, or say "0.93 (32-row split; 0.80 cross-validated)".
+
+The rank-quality advantage of the vetting features also shrinks under CV (AUC
+0.946 vs 0.937, overlapping intervals) even though the single split showed 0.996
+vs 0.984. Another reason the single-split comparison was never decisive.
 
 ### Where the ceiling is (data-scaling check)
 
