@@ -1,0 +1,6 @@
+# Optional: needed only for DATA_MODE=live (MAST / Kepler downloads).
+# Stub mode and CI do not install these.
+-r requirements.txt
+
+lightkurve>=2.4,<3
+astropy>=6,<8

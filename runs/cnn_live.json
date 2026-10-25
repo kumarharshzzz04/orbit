@@ -1,0 +1,40 @@
+{
+  "name": "orbit-cnn-v1-live",
+  "model": "cnn",
+  "seed": 42,
+  "hypothesis_id": null,
+  "data": {
+    "mode": "live",
+    "n_bins": 400,
+    "split_version": "v1",
+    "stub_targets": 1500,
+    "stub_seed": 42,
+    "verify_content": true
+  },
+  "features": {
+    "set": "catalog_v1"
+  },
+  "model_params": {
+    "channels": [32, 64, 96],
+    "kernel_size": 7,
+    "dropout": 0.3,
+    "fc_dim": 64,
+    "class_weight": null
+  },
+  "training": {
+    "threshold_selection": "val_f1",
+    "threshold": 0.5,
+    "max_epochs": 30,
+    "batch_size": 64,
+    "learning_rate": 0.001,
+    "weight_decay": 0.0001,
+    "patience": 6,
+    "num_threads": 4,
+    "max_train_seconds": 600,
+    "augmentation": {
+      "phase_shift": false,
+      "noise_ppm": 0.0
+    }
+  },
+  "notes": "CNN challenger on real Kepler photometry. Build data/live first; full downloads are the bottleneck."
+}

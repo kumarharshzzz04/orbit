@@ -1,0 +1,30 @@
+{
+  "name": "orbit-baseline-v1",
+  "model": "baseline",
+  "seed": 42,
+  "hypothesis_id": null,
+  "data": {
+    "mode": "stub",
+    "n_bins": 400,
+    "split_version": "v1",
+    "stub_targets": 1500,
+    "stub_seed": 42,
+    "verify_content": true
+  },
+  "features": {
+    "set": "catalog_v1"
+  },
+  "model_params": {
+    "n_estimators": 300,
+    "max_depth": 6,
+    "learning_rate": 0.05,
+    "subsample": 0.9,
+    "min_samples_leaf": 4,
+    "class_weight": null
+  },
+  "training": {
+    "threshold_selection": "val_f1",
+    "threshold": 0.5
+  },
+  "notes": "Classical champion: 12 engineered features, gradient boosting (300 trees, depth 6)."
+}

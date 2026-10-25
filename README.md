@@ -17,7 +17,7 @@ Read [AGENTS.md](AGENTS.md) first. It is the operating manual for humans and AI 
 
 | Module | Owner | State |
 |---|---|---|
-| ML sandbox + eval harness (`backend/ml_sandbox/`) | C | **Working** — stub + live data paths, frozen grouped splits, GBM and 1D-CNN, replayable run records |
+| ML sandbox + eval harness (`backend/ml_sandbox/`) | C | **Working** — stub cache 1,500, GBM F1 0.837, CNN F1 0.821, vetting challenger F1 0.930; live KOI+MAST path smoke-tested |
 | FastAPI app, SQLite, registry, CI (`backend/app/`) | B | Not started |
 | Agent orchestrator + prompts (`backend/app/services/`) | A | Not started |
 | React mission control (`frontend/`) | D | Not started |
@@ -64,9 +64,13 @@ python -m ml_sandbox.train --config ../runs/baseline_v1.json --out ../artifacts/
 # 3. train the CNN challenger
 python -m ml_sandbox.train --config ../runs/cnn_v1.json --out ../artifacts/cnn_v1
 
-# 4. tests (leakage, determinism, CLI contract, replay)
+# 4. tests (leakage, determinism, CLI contract, replay) - 58 tests
 pytest -q
 ```
+
+Verified on 2026-10-25: baseline F1 0.837 / AUC 0.899, CNN F1 0.821 / AUC 0.879,
+vetting-feature challenger F1 0.930 / AUC 0.983 on frozen stub split `v1`. These
+are synthetic-data numbers; they prove the pipeline, not Kepler performance.
 
 Every training command ends with one JSON line on stdout:
 
@@ -82,9 +86,16 @@ Live data (NASA Exoplanet Archive + MAST) is the same pipeline with `--mode live
 the optional astronomy stack:
 
 ```bash
+cd backend
 pip install -r requirements-astro.txt
-python -m ml_sandbox.build_cache --mode live --targets 1500
+python -m ml_sandbox.build_cache --mode live --targets 1500 --workers 3
+python -m ml_sandbox.train --config ../runs/baseline_live.json --out ../artifacts/live-baseline
 ```
+
+The live path was smoke-tested on 12 real Kepler targets. Downloads are
+process-isolated (`--workers 3`): astroquery is not thread-safe. Measured ~20s per
+target effective; a 300-target demo subset is ~75-90 minutes, so plan the download
+budget (the full 1,500 is ~6-7 hours).
 
 ## Contracts
 

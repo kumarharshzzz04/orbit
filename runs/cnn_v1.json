@@ -1,0 +1,40 @@
+{
+  "name": "orbit-cnn-v1",
+  "model": "cnn",
+  "seed": 42,
+  "hypothesis_id": null,
+  "data": {
+    "mode": "stub",
+    "n_bins": 400,
+    "split_version": "v1",
+    "stub_targets": 1500,
+    "stub_seed": 42,
+    "verify_content": true
+  },
+  "features": {
+    "set": "catalog_v1"
+  },
+  "model_params": {
+    "channels": [32, 64, 96],
+    "kernel_size": 7,
+    "dropout": 0.3,
+    "fc_dim": 64,
+    "class_weight": null
+  },
+  "training": {
+    "threshold_selection": "val_f1",
+    "threshold": 0.5,
+    "max_epochs": 30,
+    "batch_size": 64,
+    "learning_rate": 0.001,
+    "weight_decay": 0.0001,
+    "patience": 6,
+    "num_threads": 4,
+    "max_train_seconds": 600,
+    "augmentation": {
+      "phase_shift": false,
+      "noise_ppm": 0.0
+    }
+  },
+  "notes": "1D CNN champion candidate on the 400-bin folded flux (Conv1D 32-64-96, global pool, dropout 0.3)."
+}

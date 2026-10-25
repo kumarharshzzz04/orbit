@@ -16,6 +16,28 @@ NOTE:    decisions, surprises, gotchas the next person needs
 
 ---
 
+## 2026-10-25 14:34 - Member C (ML)
+DONE: repo scaffold pushed to github.com/kumarharshzzz04/orbit (private); full ML sandbox
+      built: KOI TAP labels (9,564 usable) + live MAST path, 12 real targets cached
+      (sequential 546s vs `--workers 3` 186s, identical fingerprint), deterministic
+      preprocessing, content-hashed cache + packed fast path, host-grouped frozen split
+      v1 (1,051/225/224), GBM + CNN under one harness, 58 tests green.
+      Stub metrics: baseline F1 0.837/AUC 0.899; CNN F1 0.821/AUC 0.879;
+      vetting-features challenger F1 0.930/AUC 0.983; class-weight 0.826;
+      CNN augmented 0.830. Dataset fingerprint ee1f7e04226f8e7b0ca68b3bd4dd8527877bac17,
+      split fingerprint 303b6081ebb5002449fae5de31b30f5adb78a732.
+NEXT:  full live 1,500-target cache; B wires registry/promote(); A consumes run_record.json
+BLOCKED: none
+NOTE:  stub data is synthetic - never quote these as Kepler performance. Full live cache is
+      bandwidth-bound (~20s/target effective at 3 workers; 1,500 targets ~6-7h). Do NOT use
+      threads for MAST: astroquery closes shared stdout; downloads are process-isolated.
+      The CNN losing is a real negative result, not a bug. Split v1 was
+      re-frozen once before this commit after fixing the live raw-flux sigma clip; from this
+      commit on it is frozen. The three example blocks below are the master-plan seed
+      examples, not this repo's history.
+
+---
+
 <!-- ==================== copy the template below ==================== -->
 
 ## 2026-11-08 14:20 - Member C (ML)

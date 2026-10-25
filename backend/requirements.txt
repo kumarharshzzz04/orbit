@@ -1,0 +1,15 @@
+# ORBIT ML sandbox - CPU only, Python 3.11 (see docs/ML.md).
+# Astronomy downloads are optional: backend/requirements-astro.txt.
+
+numpy>=1.26,<3
+pandas>=2.1,<3
+scikit-learn>=1.4,<2
+scipy>=1.11,<2
+joblib>=1.3,<2
+
+# CNN. The CPU index avoids multi-GB CUDA wheels on CI and laptops.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch>=2.2,<3
+
+# Tests
+pytest>=8,<9

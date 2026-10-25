@@ -11,13 +11,16 @@ information here is worse than no information.
 ## 1. Current State (update on EVERY pull request - one writer: Member A)
 
 ```
-LAST UPDATED:   2026-XX-XX HH:MM  (owner: A)
+LAST UPDATED:   2026-10-25 14:34  (interim by C - owner A to confirm)
 SYSTEM STATE:   [ ] not started   [x] scaffolding   [ ] walking skeleton (CP-1)
                 [ ] feature complete (CP-2)         [ ] frozen (h27)
-WORKING:        -
-BROKEN:         -
-NEXT UP:        Day 0 checklist (see PROGRESS.md)
-DEMO RISK:      none yet
+WORKING:        ML sandbox: 1,500-target stub cache; baseline F1 0.837/AUC 0.899;
+                CNN F1 0.821; vetting challenger F1 0.930; 12-target live MAST cache
+                (process-parallel fetch, identical fingerprint to sequential)
+BROKEN:         backend app/registry, agent loop, frontend, active CI (not built yet)
+NEXT UP:        B: FastAPI + registry + promote(); A: orchestrator loop; C: full live cache
+DEMO RISK:      full live cache not downloaded; CNN loses to GBM on stub;
+                ci.yml is still at repo root, not active
 ```
 
 ## 2. Owners (one owner per module, at any moment)
