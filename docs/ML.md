@@ -62,6 +62,39 @@ The rank-quality advantage of the vetting features also shrinks under CV (AUC
 0.946 vs 0.937, overlapping intervals) even though the single split showed 0.996
 vs 0.984. Another reason the single-split comparison was never decisive.
 
+### What the residual errors are (pixel-level diagnostic)
+
+The archive publishes pixel-based vetting statistics that a photometry-only
+pipeline never sees. One TAP query, cached locally at `data/live/koi_pixel.csv`:
+
+```sql
+select kepoi_name, koi_fpflag_nt, koi_fpflag_ss, koi_fpflag_co, koi_fpflag_ec,
+       koi_fwm_stat_sig, koi_dicco_msky, koi_dikco_msky, koi_score
+from cumulative where koi_disposition in ('CONFIRMED','CANDIDATE','FALSE POSITIVE')
+```
+
+Joined against the 25 out-of-fold false positives (234 primary rows):
+
+| Group | n | centroid flag | not-transit-like | stellar eclipse |
+|---|---|---|---|---|
+| our false positives | 25 | **12 (48%)** | 13 (52%) | 4 (16%) |
+| all FP-labelled primaries | 145 | 62 (43%) | 40 (28%) | 64 (44%) |
+| CONFIRMED primaries | 89 | 0 (0%) | 0 (0%) | 0 (0%) |
+
+The two frozen-split false positives are both centroid-offset cases:
+K03492.01 has an 8.52" difference-image offset, K04641.01 3.69" plus an
+ephemeris-match flag. So the earlier "shallow low-SNR" read was incomplete: the
+signal really is coming from a nearby source in both cases.
+
+This is the error budget, and it explains why no feature tweak or extra light
+curve moved F1. Half the residual error is background blends that are invisible
+in folded flux; the rest is not-transit-like noise and stellar variability.
+
+**These flags are not eligible as features.** They are inputs to the archive's own
+disposition, so training on them would be circular, would score near-perfectly,
+and the Skeptic would rightly veto it. They are used here only to explain errors.
+A production system would compute centroid shifts itself from Target Pixel Files.
+
 ### Where the ceiling is (data-scaling check)
 
 Before spending the download budget we measured whether F1 is data-limited.
@@ -391,6 +424,10 @@ rows with the Evaluator's diagnosis - negative results are assets.
 15. **Fold-shape one-liners are a dead end.** Width-at-fraction-of-depth and
     ingress asymmetry features scored AUC 0.44-0.63 on the live folds; they would
     have added noise. Do not ship them without a real transit model fit.
+16. **The residual error is pixel-level, not photometric.** 12 of our 25
+    out-of-fold false positives carry the archive centroid-offset flag. Do not try
+    to model blends away from folded flux; ingest Target Pixel Files or accept the
+    ceiling. Archive vetting flags are label inputs - never train on them.
 
 ## Definition of done for the ML handoff to B
 
