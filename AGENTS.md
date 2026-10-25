@@ -11,23 +11,24 @@ information here is worse than no information.
 ## 1. Current State (update on EVERY pull request - one writer: Member A)
 
 ```
-LAST UPDATED:   2026-10-25 16:45  (by C; owner A to confirm)
+LAST UPDATED:   2026-10-25 17:45  (by C; owner A to confirm)
 SYSTEM STATE:   [ ] not started   [x] scaffolding   [ ] walking skeleton (CP-1)
                 [x] ML frozen (live scored)      [ ] feature complete (CP-2)
-WORKING:        ML sandbox frozen on real data: 297 live Kepler targets (300 requested,
-                3 skipped) + 1,500 stub; 64 tests; live champion F1 0.933/AUC 0.984 on the
-                32-row frozen split, and the honest generalization estimate is F1 0.80
-                +/- 0.04 / AUC 0.934 from host-grouped 5-fold CV over all 297; live
-                vetting challenger 0.933/0.996 -> REJECT; class-weight 0.929, CNN 0.737
-                -> REJECT; replay reproduced every metric; fixtures under docs/fixtures/
+WORKING:        ML frozen on real data: 297 live Kepler targets (300 requested, 3 skipped)
+                + 1,500 stub; 73 tests; ruff/black clean; champion F1 0.933/AUC 0.984 on
+                the 32-row frozen split, generalization estimate F1 0.80 +/- 0.04 / AUC
+                0.934 from host-grouped 5-fold CV; vetting 0.933/0.996, class-weight
+                0.929, CNN 0.737 -> all REJECT; optional CUDA CNN path (5.1x training,
+                11.97s -> 2.36s); error budget: 12/25 out-of-fold FPs are centroid
+                blends; bootstrap CI CLI; 900-target cache downloading (58%), auto
+                v2 + calibration re-score armed
 BROKEN:         backend app/registry, agent loop, frontend, active CI (not built yet)
-NEXT UP:        B: FastAPI + registry + promote(); A: orchestrator loop;
-                D: Vite UI against docs/fixtures/ws_events.jsonl; C: hand B the four
-                live run_record.json rows (verdicts PENDING)
-DEMO RISK:      only 297 of 1,500 live targets; the live gate has no KEEP yet (stub run
-                supplies the KEEP example); ci.yml still at repo root; the 32-row live
-                split reads 0.93 while CV says 0.80, so never quote 0.933 without n and
-                the CV number; more data buys precision, not F1 (data-scaling curve)
+NEXT UP:        B: FastAPI + registry + promote(); A: orchestrator loop + NIM/Nemotron
+                LLM connector (NVIDIA event); D: Vite UI against docs/fixtures/;
+                C: hand B the live run_record.json rows and report v2 verdicts
+DEMO RISK:      live gate has no KEEP and CV says 0.80, so never quote 0.933 alone;
+                more data and GPU buy precision/speed, not F1 (ceiling is pixel-level
+                blends); 297 of 1,500 targets; ci.yml still at repo root
 ```
 
 ## 2. Owners (one owner per module, at any moment)

@@ -16,6 +16,23 @@ NOTE:    decisions, surprises, gotchas the next person needs
 
 ---
 
+## 2026-10-25 17:45 - Member C (ML)
+DONE: quantified the residual error with the archive's pixel-vetting columns (12 of 25
+      out-of-fold false positives carry koi_fpflag_co; both frozen-split FPs are
+      centroid-offset blends at 8.52" and 3.69"). Added an optional CUDA path for the CNN
+      (11.97s -> 2.36s training, 5.1x, identical F1 0.8256, AUC differs because CUDA is
+      not bit-reproducible) plus Python 3.10 compatibility for the tf_gpu env. Backend is
+      ruff+black clean; 73 tests green.
+NEXT: 900-target cache at 58% (530/900). On completion the v2 watcher re-scores four
+      configs and the calibration watcher adds the pre-registered Platt challenger.
+BLOCKED: none
+NOTE: archive vetting flags are inputs to the official disposition - never use them as
+      features, only to explain errors. GPU changes speed only: it does not move F1 or the
+      ceiling, so do not let a deck imply otherwise. The CUDA env is Python 3.10, which is
+      why the code uses datetime.timezone.utc and ruff ignores UP017.
+
+---
+
 ## 2026-10-25 17:15 - Member C (ML)
 DONE: two independent checks on the frozen 297-target live set, both done before v2 exists.
       (1) Host-grouped 5-fold CV (threshold fixed from the original validation split, so no
