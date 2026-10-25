@@ -66,27 +66,49 @@ vs 0.984. Another reason the single-split comparison was never decisive.
 
 The 297-target cache is a demo subset, not a research dataset. To see what scale
 would buy, the same 12 catalog features were trained on the **entire** KOI table
-(9,564 targets, 8,214 host stars, 4,725 positives), host-grouped 5-fold CV with
-the threshold chosen on an inner validation split of each fold:
+(9,564 usable rows, 8,214 host stars, 4,725 positives of which 2,748 are
+CONFIRMED), host-grouped 5-fold CV. Each fold picks its threshold on an inner
+validation split, and metrics are scored on primary truth (CONFIRMED vs FALSE
+POSITIVE), the same protocol as every other number in this document:
 
-| Training data | 5-fold F1 | 5-fold AUC | Targets |
+| Training data | 5-fold F1 | 5-fold AUC | Primary rows |
 |---|---|---|---|
-| 297 light curves, catalog features | 0.801 ± 0.036 | 0.934 ± 0.030 | 297 |
-| full KOI table, catalog only | **0.835 ± 0.007** | 0.923 ± 0.003 | 9,564 |
+| 297 light curves, catalog features | 0.801 ± 0.036 | 0.934 ± 0.030 | 234 out-of-fold |
+| full KOI table, catalog only | **0.883 ± 0.017** | **0.971 ± 0.005** | 7,587 |
 
-Read this carefully: the F1 gain (+0.034) is real but modest, while the interval
-collapses by 5x because n grows by 32x. The light-curve fold features (odd/even,
-secondary eclipse) therefore add little over catalog parameters at this scale -
-consistent with the pixel-level diagnostic below. The two rows are not perfectly
-comparable (inner-validation threshold vs a transferred one), so do not quote
-0.835 as "beating" the 297 model; the defensible claim is that the two agree
-within noise and the catalog number is far more precise.
+Pooled out-of-fold confusion at per-fold thresholds: 4,517 TN, 322 FP, 321 FN,
+2,427 TP (F1 0.883). Reproduce with `python -m ml_sandbox.catalog_cv`; the
+committed report is `runs/evidence/catalog_full_cv.json` and carries the KOI CSV hash and
+the git commit it ran at.
+
+**Do not read this as 0.883 > 0.801.** Three differences matter:
+
+1. The rows are not the same population. The 297-target sample was drawn for
+   light-curve availability; the full table includes the easy, high-SNR
+   confirmations that dominate the archive.
+2. Catalog features are transit-fit parameters, not independent evidence. Depth,
+   radius ratio and SNR are the same quantities the archive's own disposition
+   leaned on, so this number measures how well the pipeline *reproduces* a
+   well-separated catalog boundary - not how well it would discover a new planet
+   from pixels.
+3. 32x more rows is why the interval collapses by 3x, and that precision is the
+   real result: at this scale the fold-shape features (odd/even, secondary
+   eclipse) add nothing over catalog parameters, consistent with the pixel-level
+   diagnostic below.
+
+The independent-evidence claim stays with the folded-pixel model, and it stays
+at **F1 0.80 on unseen hosts**. What the catalog check proves is scale and
+protocol, not a better detector.
+
+An earlier inline version of this check reported 0.835 / 0.923. That run scored
+candidate-inclusive rows at a single 0.5 threshold (we reproduced 0.838 / 0.926
+on the same out-of-fold predictions), which mixes 2,000 uncertain CANDIDATE
+labels into the truth set. It is superseded by the primary-truth table above.
 
 **Recommended next step:** add a `catalog` mode (labels + catalog features, no
 MAST downloads) as a first-class training path. Then the pitch can say "validated
 on all 9,564 KOIs, with a 900-target light-curve subset for shape diagnostics"
-instead of defending a 297-target subset. That is roughly an hour of work and no
-network.
+instead of defending a 297-target subset.
 
 ### What the residual errors are (pixel-level diagnostic)
 

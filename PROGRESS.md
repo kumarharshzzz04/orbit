@@ -16,6 +16,26 @@ NOTE:    decisions, surprises, gotchas the next person needs
 
 ---
 
+## 2026-10-25 18:05 - Member C (ML + docs)
+DONE: made the scale claim reproducible instead of rhetorical. New `ml_sandbox.catalog_cv`
+      trains the 12 catalog features on the whole KOI table (9,564 targets / 8,214 hosts)
+      with host-grouped 5-fold CV and a per-fold inner-validation threshold, scored on
+      primary truth: F1 0.883 +/- 0.017, AUC 0.971 +/- 0.005 (pooled OOF F1 0.883 over
+      7,587 primary rows: 4,517 TN / 322 FP / 321 FN / 2,427 TP). Report committed at
+      runs/evidence/catalog_full_cv.json with the KOI SHA-1 and run commit. README rewritten
+      so each claim links to the artifact or command behind it, with an explicit limitations
+      section and the NVIDIA/CUDA numbers. 73 tests green, ruff+black clean.
+NEXT: 900-target cache at 597/900 (66%), ETA ~19:05; then the v2 and calibration watchers
+      fire. Report the v2 verdicts against the pre-registered expectation.
+BLOCKED: none
+NOTE: the earlier inline 0.835/0.923 catalog figure scored candidate-inclusive rows at a
+      single 0.5 threshold (reproduced 0.838/0.926); it is superseded. Catalog features are
+      transit-fit parameters and partly correlated with the archive disposition, so 0.883
+      is a scale/protocol check, not independent evidence. Never present it as beating the
+      0.801 folded-pixel CV - different populations.
+
+---
+
 ## 2026-10-25 17:45 - Member C (ML)
 DONE: quantified the residual error with the archive's pixel-vetting columns (12 of 25
       out-of-fold false positives carry koi_fpflag_co; both frozen-split FPs are

@@ -11,7 +11,7 @@ information here is worse than no information.
 ## 1. Current State (update on EVERY pull request - one writer: Member A)
 
 ```
-LAST UPDATED:   2026-10-25 17:45  (by C; owner A to confirm)
+LAST UPDATED:   2026-10-25 18:05  (by C; owner A to confirm)
 SYSTEM STATE:   [ ] not started   [x] scaffolding   [ ] walking skeleton (CP-1)
                 [x] ML frozen (live scored)      [ ] feature complete (CP-2)
 WORKING:        ML frozen on real data: 297 live Kepler targets (300 requested, 3 skipped)
@@ -20,8 +20,11 @@ WORKING:        ML frozen on real data: 297 live Kepler targets (300 requested, 
                 0.934 from host-grouped 5-fold CV; vetting 0.933/0.996, class-weight
                 0.929, CNN 0.737 -> all REJECT; optional CUDA CNN path (5.1x training,
                 11.97s -> 2.36s); error budget: 12/25 out-of-fold FPs are centroid
-                blends; bootstrap CI CLI; 900-target cache downloading (58%), auto
-                v2 + calibration re-score armed
+                blends; bootstrap CI CLI; full-catalog scale check reproducible
+                (9,564 KOIs, 5-fold F1 0.883 +/- 0.017 / AUC 0.971 +/- 0.005) committed
+                to runs/evidence/; README now links every claim to its artifact;
+                900-target cache downloading (66%, 597/900), auto v2 + calibration
+                re-score armed
 BROKEN:         backend app/registry, agent loop, frontend, active CI (not built yet)
 NEXT UP:        B: FastAPI + registry + promote(); A: orchestrator loop + NIM/Nemotron
                 LLM connector (NVIDIA event); D: Vite UI against docs/fixtures/;
