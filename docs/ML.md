@@ -102,9 +102,17 @@ the threshold honestly.
 A larger cache is downloading (900 targets). Before any v2 number exists, the
 rules for reading it are fixed here:
 
-1. Same four configs, same seeds, same threshold rule (validation F1). Only
-   `data.split_version` changes, from `v1` to `v2`; the cache is never rebuilt
-   with different labels.
+1. The same four configs plus ONE pre-declared fifth challenger, same seeds, same
+   threshold rule (validation F1). Only `data.split_version` changes, from `v1`
+   to `v2`; the cache is never rebuilt with different labels. The fifth config,
+   `runs/challenger_calibrated_live.json` (H-003), was written before split v2
+   existed and never scored on v1 test data: one change, a strictly monotone
+   Platt calibration fitted on the validation split, so the decision threshold
+   is chosen on calibrated probabilities. Rationale: the cross-validation run
+   above showed most of the F1 loss comes from transferring a threshold fitted
+   on ~45 rows. Platt is used rather than isotonic because isotonic ties can
+   lower ROC-AUC and trip the gate's no-degradation check. If it does not beat
+   the champion on v2 F1, it is a REJECT row like any other.
 2. Same gate: F1 strictly greater than the champion, AUC not degraded, run
    replayable. No margin tuning after seeing the result.
 3. One pre-declared success criterion: a challenger KEEP row on real data. A

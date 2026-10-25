@@ -237,6 +237,23 @@ def run(
             model=cfg.model,
         )
 
+        calibration_info: dict[str, Any] | None = None
+        if cfg.training.get("calibration") == "platt":
+            from . import calibration
+
+            mapped, calibration_info = calibration.apply_platt(
+                val_split.labels,
+                {
+                    "val": result.val_probabilities,
+                    "test": result.test_probabilities,
+                    "train": result.train_probabilities,
+                },
+            )
+            result.val_probabilities = mapped["val"]
+            result.test_probabilities = mapped["test"]
+            result.train_probabilities = mapped["train"]
+            progress.emit("calibration", **calibration_info)
+
         if cfg.training["threshold_selection"] == "val_f1":
             choice = evaluate.choose_threshold_for(val_split, result.val_probabilities)
             threshold = choice.threshold
@@ -284,6 +301,7 @@ def run(
         metrics_detail = {
             **test_eval.detail(),
             "threshold_selection": cfg.training["threshold_selection"],
+            "calibration": calibration_info,
             "threshold_choice": threshold_detail,
             "validation": {
                 "metrics": val_eval.metrics,

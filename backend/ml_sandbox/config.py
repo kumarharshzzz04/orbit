@@ -62,7 +62,13 @@ _MODEL_KEYS = {
         "class_weight",
     },
 }
-_TRAINING_COMMON = {"threshold_selection", "threshold", "max_train_seconds"}
+_TRAINING_COMMON = {
+    "threshold_selection",
+    "threshold",
+    "max_train_seconds",
+    "calibration",
+}
+CALIBRATIONS = ("none", "platt")
 _TRAINING_KEYS = {
     "baseline": set(_TRAINING_COMMON),
     "cnn": _TRAINING_COMMON
@@ -350,6 +356,17 @@ def _validate_training(model: str, raw: dict[str, Any]) -> dict[str, Any]:
             + ", ".join(THRESHOLD_SELECTIONS)
         )
     training["threshold_selection"] = selection
+    calibration = _string(
+        training.get("calibration", "none"), "training.calibration"
+    )
+    if calibration not in CALIBRATIONS:
+        _fail("training.calibration must be one of " + ", ".join(CALIBRATIONS))
+    if calibration == "none":
+        # Absent by default so configs written before this option existed keep
+        # their exact config hash (replayability of published runs).
+        training.pop("calibration", None)
+    else:
+        training["calibration"] = calibration
     training["threshold"] = _number(
         training["threshold"],
         "training.threshold",

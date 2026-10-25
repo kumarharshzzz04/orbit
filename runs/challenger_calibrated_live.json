@@ -1,0 +1,31 @@
+{
+  "name": "orbit-calibrated-live-v2",
+  "model": "baseline",
+  "seed": 42,
+  "hypothesis_id": "H-003",
+  "data": {
+    "mode": "live",
+    "n_bins": 400,
+    "split_version": "v2",
+    "stub_targets": 1500,
+    "stub_seed": 42,
+    "verify_content": true
+  },
+  "features": {
+    "set": "catalog_v1"
+  },
+  "model_params": {
+    "n_estimators": 300,
+    "max_depth": 6,
+    "learning_rate": 0.05,
+    "subsample": 0.9,
+    "min_samples_leaf": 4,
+    "class_weight": null
+  },
+  "training": {
+    "threshold_selection": "val_f1",
+    "threshold": 0.5,
+    "calibration": "platt"
+  },
+  "notes": "ONE change vs the champion: fit a strictly monotone Platt map from raw scores to probabilities on the live validation split, then choose the threshold on calibrated validation scores (no test row is seen). Pre-registered before split v2 existed because host-grouped CV showed most of the F1 loss comes from transferring a threshold chosen on ~45 rows. Same features, same hyperparameters, same seed."
+}
