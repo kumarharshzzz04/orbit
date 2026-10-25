@@ -40,7 +40,9 @@ def load_predictions(path: str | Path) -> dict[str, np.ndarray]:
             [float(r["probability"]) for r in rows], dtype=np.float64
         ),
         "groups": np.asarray([r["host_star"] for r in rows], dtype=object),
-        "threshold": np.asarray([float(r["threshold"]) for r in rows], dtype=np.float64),
+        "threshold": np.asarray(
+            [float(r["threshold"]) for r in rows], dtype=np.float64
+        ),
         "primary": evaluate.primary_mask(dispositions),
         "target_ids": np.asarray([r["target_id"] for r in rows], dtype=object),
     }
@@ -98,7 +100,10 @@ def bootstrap_ci(
     lower = 100 * (alpha / 2)
     upper = 100 * (1 - alpha / 2)
     auc_ci = (
-        [float(np.percentile(auc_values, lower)), float(np.percentile(auc_values, upper))]
+        [
+            float(np.percentile(auc_values, lower)),
+            float(np.percentile(auc_values, upper)),
+        ]
         if auc_values
         else [float("nan"), float("nan")]
     )
@@ -118,7 +123,9 @@ def bootstrap_ci(
     }
 
 
-def summarize(path: str | Path, *, n_boot: int = DEFAULT_N_BOOT, seed: int = 42) -> dict:
+def summarize(
+    path: str | Path, *, n_boot: int = DEFAULT_N_BOOT, seed: int = 42
+) -> dict:
     data = load_predictions(path)
     mask = data["primary"]
     labels = data["labels"][mask]

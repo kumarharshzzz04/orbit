@@ -357,9 +357,7 @@ def _validate_training(model: str, raw: dict[str, Any]) -> dict[str, Any]:
             + ", ".join(THRESHOLD_SELECTIONS)
         )
     training["threshold_selection"] = selection
-    calibration = _string(
-        training.get("calibration", "none"), "training.calibration"
-    )
+    calibration = _string(training.get("calibration", "none"), "training.calibration")
     if calibration not in CALIBRATIONS:
         _fail("training.calibration must be one of " + ", ".join(CALIBRATIONS))
     if calibration == "none":

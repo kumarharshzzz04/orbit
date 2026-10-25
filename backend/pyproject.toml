@@ -11,7 +11,9 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E4", "E7", "E9", "F", "I", "B", "UP"]
-ignore = ["B008"]
+# UP017 wants datetime.UTC (3.11+), but the CUDA env shipped with this project is
+# Python 3.10, so the code uses datetime.timezone.utc and stays runnable on both.
+ignore = ["B008", "UP017"]
 
 [tool.black]
 line-length = 88

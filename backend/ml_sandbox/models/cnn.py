@@ -151,9 +151,13 @@ def fit_predict(
         pass
 
     if device_name not in {"cpu", "cuda"}:
-        raise ValueError(f"training.device must be 'cpu' or 'cuda', got {device_name!r}")
+        raise ValueError(
+            f"training.device must be 'cpu' or 'cuda', got {device_name!r}"
+        )
     if device_name == "cuda" and not torch.cuda.is_available():
-        raise RuntimeError("training.device='cuda' but torch.cuda.is_available() is False")
+        raise RuntimeError(
+            "training.device='cuda' but torch.cuda.is_available() is False"
+        )
     device = torch.device(device_name)
     if device_name == "cuda":
         torch.cuda.manual_seed_all(seed)
