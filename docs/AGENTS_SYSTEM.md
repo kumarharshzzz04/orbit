@@ -5,6 +5,42 @@ but the arena is science. Agents produce structured research artifacts and every
 claim must pass a benchmark gate. Agents are thin Python classes: role prompt +
 tools + JSON output contract. Personality lives in the prompt; memory in SQLite.
 
+## Status
+
+**Not started.** The ML sandbox and its CLI contract are ready; build the loop
+against them without waiting for the backend or frontend.
+
+## Start here (A)
+
+1. Read `docs/fixtures/proposal.example.json`. It is a known-good one-change
+   proposal: `features.set` from `catalog_v1` to `vetting_v1`, expected F1 gain
+   0.05. It measured F1 0.9305 versus the champion 0.8372 on the frozen stub
+   split.
+2. The Hypothesizer returns a proposal in that shape, not a full config. The
+   Experimenter loads `base_config`, applies exactly the one change, and validates
+   the merged dict with `ml_sandbox.config.RunConfig.from_dict` before running.
+   Reject unknown keys or changes to `data.mode`, `data.root`,
+   `data.split_version`, `data.expected_dataset_fingerprint` or `seed`.
+3. The Experimenter runs the real CLI and returns the real JSON. It may not invent
+   metrics:
+
+   ```bash
+   cd backend
+   python -m ml_sandbox.train --config <merged-config.json> --out ../artifacts/<run_id>
+   ```
+
+   The last stdout line is the contract; stderr carries `ORBIT_PROGRESS {json}`.
+   A non-zero exit or `ok: false` becomes a REJECT card with the error, not a
+   retry with different numbers.
+4. The Evaluator reads `artifacts/<run_id>/run_record.json` and applies the gate
+   in `docs/BACKEND.md`. `run_record.verdict` is `PENDING`; only the backend
+   `promote()` writes the final verdict.
+5. Mock mode is a feature: `LLM_MODE=mock` replays canned agent output. The
+   frontend can replay `docs/fixtures/ws_events.jsonl` before the socket exists.
+
+Do not change the WS schema without signing off in `AGENTS.md` 3.1 and updating
+D in the same PR. The payload shapes in 3.1 are the master-plan minimums.
+
 ## Roster
 
 | Agent | Question | Reads | Writes | Temp |

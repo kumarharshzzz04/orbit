@@ -1,0 +1,18 @@
+{
+  "hypothesis_id": "H-002",
+  "base_config": "runs/baseline_v1.json",
+  "change": {
+    "path": "features.set",
+    "from": "catalog_v1",
+    "to": "vetting_v1"
+  },
+  "expected_gain": {
+    "f1": 0.05
+  },
+  "rationale": "Odd/even depth and secondary-eclipse depth separate eclipsing binaries from planets without using the label.",
+  "skeptic_checks": [
+    "host star appears in only one split",
+    "features are measured from the light curve, not the disposition",
+    "decision threshold is chosen on validation only"
+  ]
+}

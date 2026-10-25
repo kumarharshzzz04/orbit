@@ -17,13 +17,38 @@ Read [AGENTS.md](AGENTS.md) first. It is the operating manual for humans and AI 
 
 | Module | Owner | State |
 |---|---|---|
-| ML sandbox + eval harness (`backend/ml_sandbox/`) | C | **Working** — stub cache 1,500, GBM F1 0.837, CNN F1 0.821, vetting challenger F1 0.930; live KOI+MAST path smoke-tested |
-| FastAPI app, SQLite, registry, CI (`backend/app/`) | B | Not started |
-| Agent orchestrator + prompts (`backend/app/services/`) | A | Not started |
-| React mission control (`frontend/`) | D | Not started |
+| ML sandbox + eval harness (`backend/ml_sandbox/`) | C | **Ready for integration** — 1,500-target stub cache, 59 tests, GBM F1 0.837, CNN F1 0.821, vetting challenger F1 0.930; live KOI+MAST path smoke-tested |
+| FastAPI app, SQLite, registry, CI (`backend/app/`) | B | Not started — start at `docs/BACKEND.md` |
+| Agent orchestrator + prompts (`backend/app/services/`) | A | Not started — start at `docs/AGENTS_SYSTEM.md` |
+| React mission control (`frontend/`) | D | Not started — start at `docs/FRONTEND.md` |
 
 `ci.yml` at the repo root is the workflow B installs at `.github/workflows/ci.yml` once
 `backend/app/` and `frontend/` exist. It is intentionally not active yet — it would only be red.
+
+## Start here
+
+Everyone should be able to run the ML pipeline and its tests on CPU without network:
+
+```bash
+cd backend
+python -m venv .venv
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+python -m ml_sandbox.build_cache --mode stub --targets 1500
+python -m pytest -q
+```
+
+Then follow your module:
+
+| Role | Read | Build against | Done when |
+|---|---|---|---|
+| A (agents) | `docs/AGENTS_SYSTEM.md` | `docs/fixtures/proposal.example.json` | A mission produces a proposal, Skeptic verdict, Experimenter run and Evaluator verdict |
+| B (backend) | `docs/BACKEND.md` | `docs/fixtures/registry_rows.example.json` | `run_record.json` is inserted append-only and `promote()` changes the champion |
+| D (frontend) | `docs/FRONTEND.md` | `docs/fixtures/ws_events.jsonl` | Replaying the fixture renders the debate, leaderboard and KEEP chip; then swap in the real socket |
+| C (ML) | `docs/ML.md` | `runs/*.json` | 300-target live cache scored once; tuning stays validation-only |
+
+Full handoff block with commands and traps: [HANDOVER.md](HANDOVER.md). The shared mock
+stream, registry rows and proposal live under [docs/fixtures](docs/fixtures).
 
 ## Repository layout
 
@@ -36,6 +61,7 @@ orbit/
   ci.yml                    GitHub Actions workflow (B activates it)
   docs/                     module briefs + agent specs
     ML.md BACKEND.md FRONTEND.md AGENTS_SYSTEM.md
+    fixtures/               WS stream, registry rows, one-change proposal
   ORBIT_Hackathon_Master_Plan.pdf
   backend/
     ml_sandbox/              # owned by C - data, models, evaluation

@@ -1,0 +1,62 @@
+[
+  {
+    "id": "baseline_v1",
+    "hypothesis_id": null,
+    "config_hash": "f5710ad0387243f6586e69ba15a03648f3d768f7",
+    "seed": 42,
+    "git_commit": "d9ca7a6e7d4440e9459bae597ded8af13a079ed5",
+    "dataset_fingerprint": "ee1f7e04226f8e7b0ca68b3bd4dd8527877bac17",
+    "metrics": {
+      "accuracy": 0.8534031413612565,
+      "precision": 0.9113924050632911,
+      "recall": 0.7741935483870968,
+      "f1": 0.8372093023255814,
+      "roc_auc": 0.8988369541364933
+    },
+    "artifact_path": "artifacts/baseline_v1/",
+    "verdict": "KEEP",
+    "diagnosis": "Seed champion; replayable on frozen split v1.",
+    "created_at": "2026-10-25T09:25:58+00:00",
+    "replayable": true
+  },
+  {
+    "id": "challenger_vetting_features",
+    "hypothesis_id": "H-002",
+    "config_hash": "87c5265ccf483824894903b4f8a9aded09b45818",
+    "seed": 42,
+    "git_commit": "d9ca7a6e7d4440e9459bae597ded8af13a079ed5",
+    "dataset_fingerprint": "ee1f7e04226f8e7b0ca68b3bd4dd8527877bac17",
+    "metrics": {
+      "accuracy": 0.9319371727748691,
+      "precision": 0.925531914893617,
+      "recall": 0.9354838709677419,
+      "f1": 0.9304812834224598,
+      "roc_auc": 0.9833223612025455
+    },
+    "artifact_path": "artifacts/challenger_vetting_features/",
+    "verdict": "KEEP",
+    "diagnosis": "F1 0.9305 beats champion 0.8372; AUC 0.9833 is above 0.8988; replayable.",
+    "created_at": "2026-10-25T09:26:17+00:00",
+    "replayable": true
+  },
+  {
+    "id": "challenger_class_weight",
+    "hypothesis_id": "H-001",
+    "config_hash": "035248f90fe25d50e5b9e4688db77c9fe8d7f2b9",
+    "seed": 42,
+    "git_commit": "d9ca7a6e7d4440e9459bae597ded8af13a079ed5",
+    "dataset_fingerprint": "ee1f7e04226f8e7b0ca68b3bd4dd8527877bac17",
+    "metrics": {
+      "accuracy": 0.8429319371727748,
+      "precision": 0.8987341772151899,
+      "recall": 0.7634408602150538,
+      "f1": 0.8255813953488371,
+      "roc_auc": 0.901909150757077
+    },
+    "artifact_path": "artifacts/challenger_class_weight/",
+    "verdict": "REJECT",
+    "diagnosis": "F1 0.8256 is below champion 0.8372; AUC 0.9019 clears the no-degradation check.",
+    "created_at": "2026-10-25T09:26:22+00:00",
+    "replayable": true
+  }
+]

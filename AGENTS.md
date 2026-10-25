@@ -11,16 +11,17 @@ information here is worse than no information.
 ## 1. Current State (update on EVERY pull request - one writer: Member A)
 
 ```
-LAST UPDATED:   2026-10-25 14:34  (interim by C - owner A to confirm)
+LAST UPDATED:   2026-10-25 15:02  (by C; owner A to confirm)
 SYSTEM STATE:   [ ] not started   [x] scaffolding   [ ] walking skeleton (CP-1)
                 [ ] feature complete (CP-2)         [ ] frozen (h27)
-WORKING:        ML sandbox: 1,500-target stub cache; baseline F1 0.837/AUC 0.899;
-                CNN F1 0.821; vetting challenger F1 0.930; 12-target live MAST cache
-                (process-parallel fetch, identical fingerprint to sequential)
+WORKING:        ML sandbox complete: 1,500-target stub cache; 59 tests; baseline
+                F1 0.837/AUC 0.899; CNN F1 0.821; vetting challenger F1 0.930/AUC 0.983;
+                12-target live MAST smoke; shared fixtures under docs/fixtures/
 BROKEN:         backend app/registry, agent loop, frontend, active CI (not built yet)
-NEXT UP:        B: FastAPI + registry + promote(); A: orchestrator loop; C: full live cache
-DEMO RISK:      full live cache not downloaded; CNN loses to GBM on stub;
-                ci.yml is still at repo root, not active
+NEXT UP:        B: FastAPI + registry + promote(); A: orchestrator loop;
+                D: Vite UI against docs/fixtures/ws_events.jsonl; C: 300-target live cache
+DEMO RISK:      full live cache not downloaded; real-data scores unmeasured;
+                ci.yml is still at repo root; only vetting challenger clears the gate
 ```
 
 ## 2. Owners (one owner per module, at any moment)
@@ -47,7 +48,13 @@ graph panel becomes optional. Owner changes must be recorded here AND in `HANDOV
 
 - `agent_message.payload`: `{ "agent": "researcher|hypothesizer|skeptic|experimenter|evaluator|orchestrator",
   "round": int, "type": "evidence_card|proposal|critique|run_record|verdict|status", "body": string, "refs": [] }`
+- Other payloads (master plan table 8; A owns final sign-off):
+  - `run_progress.payload`: `{ "run_id": string, "stage": string, "percent": float }`
+  - `run_metrics.payload`: `{ "run_id": string, "metrics": { "accuracy": float, "precision": float, "recall": float, "f1": float, "roc_auc": float } }`
+  - `verdict.payload`: `{ "run_id": string, "kept": bool, "rationale": string }`
+  - `system.payload`: `{ "level": "info|warn|error", "text": string }`
 - Frontend renders any unknown `type` as plain text. Backend never breaks the enum silently.
+- Replayable sample stream: `docs/fixtures/ws_events.jsonl`.
 
 ### 3.2 Experiment registry row (append-only)
 
@@ -79,6 +86,7 @@ A crash exits non-zero and the API survives. LLM and MAST both have mock modes
 - **Commits:** conventional commits (`feat:`, `fix:`, `docs:`, `chore:`). One logical change per commit.
 - **Format:** ruff + black on Python, eslint on TS - CI enforces, no debates.
 - **Secrets:** real keys live in `.env` (git-ignored). `.env.example` carries placeholders only.
+- **No AI attribution:** never add an AI tool as commit co-author, contributor or repository collaborator. Commits use the human teammate's identity only.
 - **PR checklist:** schema unchanged? (if changed: A approved) / tests pass / PROGRESS.md block added / AGENTS.md section 1 updated.
 
 ## 5. NEVER do (break these and the demo/science breaks)

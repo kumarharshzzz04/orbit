@@ -160,6 +160,12 @@ fingerprint over `(target, host, split) + dataset_fingerprint + seed`.
 | `runs/challenger_class_weight.json` | GBM, balanced weights | 12 features | F1 0.826 (REJECT: F1 below champion) |
 | `runs/challenger_cnn_augmented.json` | CNN + phase roll/noise | 400-bin flux | F1 0.830 (REJECT: F1 below champion) |
 
+Tuning check (2026-10-25): a 12-config validation sweep on `vetting_v1` found
+best validation F1 0.9355 (500 trees, depth 5, `max_features="sqrt"`). Its single
+test score was F1 0.9290 / AUC 0.9812, below the shipped challenger's 0.9305 /
+0.9833, so **no config was adopted**. With 225 validation rows and 224 test rows,
+0.01 differences are noise; do not select on test.
+
 CNN architecture (docs plan): Conv1d(32)-pool-Conv1d(64)-pool-Conv1d(96)-global
 avg pool-dropout(0.3)-FC(64)-1 logit. 64,033 parameters with the default config.
 Input transform is fixed: `((flux - 1.0) * 100).clip(-5, 5)`. Training uses

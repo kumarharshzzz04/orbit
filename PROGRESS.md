@@ -16,6 +16,19 @@ NOTE:    decisions, surprises, gotchas the next person needs
 
 ---
 
+## 2026-10-25 15:10 - Member C (ML)
+DONE: handoff complete. Added shared fixtures (`docs/fixtures/ws_events.jsonl`,
+      registry rows, one-change proposal), real handover block, per-role start
+      sections in README/BACKEND/AGENTS_SYSTEM/FRONTEND, and WS payload shapes in
+      AGENTS.md 3.1. Validation-only tuning sweep: best val F1 0.9355, test F1
+      0.9290 < shipped 0.9305, so no new config adopted. 59 tests green.
+NEXT: B registry + promote(); A orchestrator; D fixture-first UI; C 300-target live cache.
+BLOCKED: none
+NOTE: ML records stay PENDING until B's promote() runs. Stub metrics prove pipeline,
+      not Kepler performance. Never tune on test; 225/224 val/test rows make 0.01 noise.
+
+---
+
 ## 2026-10-25 14:34 - Member C (ML)
 DONE: repo scaffold pushed to github.com/kumarharshzzz04/orbit (private); full ML sandbox
       built: KOI TAP labels (9,564 usable) + live MAST path, 12 real targets cached

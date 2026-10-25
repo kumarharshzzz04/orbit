@@ -3,13 +3,17 @@
 The spine: REST + WebSocket + persistence + registry, and it spawns the ML sandbox
 as a subprocess (crash isolation). Single FastAPI app, strict layout.
 
+## Status
+
+**Not started.** These are the CP targets; tick them as they are built, not before.
+
 ## Success criteria
 
-- [x-CP1] App boots; SQLite schema created (6 tables); POST /api/missions works
-- [x-CP1] WS `/ws/{mission_id}` broadcasts orchestrator output from the canned transcript
-- [x-CP2] Registry API: experiments append-only; artifacts endpoint streams files
-- [x-CP2] `promote()` gate unit-tested (KEEP and REJECT paths)
-- [x-CP2] CI green: lint + test + smoke
+- [ ] CP-1: App boots; SQLite schema created (6 tables); POST /api/missions works
+- [ ] CP-1: WS `/ws/{mission_id}` broadcasts orchestrator output from the canned transcript
+- [ ] CP-2: Registry API: experiments append-only; artifacts endpoint streams files
+- [ ] CP-2: `promote()` gate unit-tested (KEEP and REJECT paths)
+- [ ] CP-2: CI green: lint + test + smoke
 - [ ] FREEZE: mock LLM smoke (`LLM_MODE=mock`) gives a verdict in < 30s
 
 ## Layout (the contract)
@@ -37,6 +41,49 @@ backend/
 | POST | /api/data/cache | trigger KOI/light-curve caching (progress via WS) |
 | GET | /api/graph | nodes+edges for graph panel |
 | WS | /ws/{mission_id} | agent_message / run_progress / run_metrics / verdict / system |
+
+## Handoff from ML (start here)
+
+The ML sandbox is complete and already emits the registry-shaped record. Do not
+reimplement training or scoring in the API process; spawn the CLI and consume its
+contract.
+
+```python
+proc = subprocess.run(
+    [sys.executable, "-m", "ml_sandbox.train",
+     "--config", str(config_path),
+     "--out", str(repo_root / "artifacts" / run_id)],
+    cwd=repo_root / "backend",
+    capture_output=True,
+    text=True,
+    timeout=timeout_seconds,
+)
+summary = json.loads(proc.stdout.strip().splitlines()[-1])
+if proc.returncode != 0 or not summary.get("ok"):
+    raise RuntimeError(summary.get("error", proc.stderr[-2000:]))
+record = json.loads((repo_root / summary["artifact"] / "run_record.json").read_text())
+```
+
+- The **last stdout line is always JSON**. Earlier stdout lines are not part of the
+  contract; logs go to stderr as normal lines and as `ORBIT_PROGRESS {json}`
+  (`stage`, `done`, `total`, `percent`). Map those to the `run_progress` WS event;
+  emit `run_metrics` only after the final summary exists.
+- `run_record.json` fields map directly to AGENTS.md 3.2. `verdict` starts
+  `PENDING`; only `promote()` may write `KEEP`/`REJECT`. Keep `diagnosis: null`
+  until the gate fills it.
+- Extra fields (`split_fingerprint`, `replayable`, `training`, `config`) are useful;
+  store them in `metrics_json` or dedicated columns. Do not drop the contract keys.
+- `replayable` is true only when the git tree was clean at run time. The gate must
+  reject `replayable: false` before comparing F1.
+- Artifacts to serve from `artifact_path`: `run_record.json`, `metrics.json`,
+  `confusion_matrix.json`, `predictions.csv`, `feature_importance.json`,
+  `model_meta.json`, `config.json`, `progress.jsonl`, and `model.joblib` or
+  `model.pt`. Resolve paths under the repo artifact root and reject traversal.
+- Use `docs/fixtures/registry_rows.example.json` to seed the DB and test the
+  leaderboard before the first real run. Use `LLM_MODE=mock` and `DATA_MODE=stub`
+  for smoke tests; no network is required.
+- `POST /api/data/cache` must also be a subprocess. Pass `--workers 1` from the API
+  process; `--workers 3` is a standalone-CLI option only.
 
 ## Data model (SQLite + SQLModel)
 
