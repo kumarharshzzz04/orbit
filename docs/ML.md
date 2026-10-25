@@ -62,6 +62,32 @@ The rank-quality advantage of the vetting features also shrinks under CV (AUC
 0.946 vs 0.937, overlapping intervals) even though the single split showed 0.996
 vs 0.984. Another reason the single-split comparison was never decisive.
 
+### Scale check: the full KOI catalog, no downloads
+
+The 297-target cache is a demo subset, not a research dataset. To see what scale
+would buy, the same 12 catalog features were trained on the **entire** KOI table
+(9,564 targets, 8,214 host stars, 4,725 positives), host-grouped 5-fold CV with
+the threshold chosen on an inner validation split of each fold:
+
+| Training data | 5-fold F1 | 5-fold AUC | Targets |
+|---|---|---|---|
+| 297 light curves, catalog features | 0.801 ± 0.036 | 0.934 ± 0.030 | 297 |
+| full KOI table, catalog only | **0.835 ± 0.007** | 0.923 ± 0.003 | 9,564 |
+
+Read this carefully: the F1 gain (+0.034) is real but modest, while the interval
+collapses by 5x because n grows by 32x. The light-curve fold features (odd/even,
+secondary eclipse) therefore add little over catalog parameters at this scale -
+consistent with the pixel-level diagnostic below. The two rows are not perfectly
+comparable (inner-validation threshold vs a transferred one), so do not quote
+0.835 as "beating" the 297 model; the defensible claim is that the two agree
+within noise and the catalog number is far more precise.
+
+**Recommended next step:** add a `catalog` mode (labels + catalog features, no
+MAST downloads) as a first-class training path. Then the pitch can say "validated
+on all 9,564 KOIs, with a 900-target light-curve subset for shape diagnostics"
+instead of defending a 297-target subset. That is roughly an hour of work and no
+network.
+
 ### What the residual errors are (pixel-level diagnostic)
 
 The archive publishes pixel-based vetting statistics that a photometry-only
