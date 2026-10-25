@@ -11,17 +11,21 @@ information here is worse than no information.
 ## 1. Current State (update on EVERY pull request - one writer: Member A)
 
 ```
-LAST UPDATED:   2026-10-25 15:02  (by C; owner A to confirm)
+LAST UPDATED:   2026-10-25 16:45  (by C; owner A to confirm)
 SYSTEM STATE:   [ ] not started   [x] scaffolding   [ ] walking skeleton (CP-1)
-                [ ] feature complete (CP-2)         [ ] frozen (h27)
-WORKING:        ML sandbox complete: 1,500-target stub cache; 59 tests; baseline
-                F1 0.837/AUC 0.899; CNN F1 0.821; vetting challenger F1 0.930/AUC 0.983;
-                12-target live MAST smoke; shared fixtures under docs/fixtures/
+                [x] ML frozen (live scored)      [ ] feature complete (CP-2)
+WORKING:        ML sandbox frozen on real data: 297 live Kepler targets (300 requested,
+                3 skipped) + 1,500 stub; 59 tests; live champion F1 0.933/AUC 0.984
+                (n=32 test, 14 pos); live vetting challenger F1 0.933/AUC 0.996 -> REJECT;
+                live class-weight 0.929, CNN 0.737 -> REJECT; same-config replay reproduced
+                every metric; shared fixtures under docs/fixtures/
 BROKEN:         backend app/registry, agent loop, frontend, active CI (not built yet)
 NEXT UP:        B: FastAPI + registry + promote(); A: orchestrator loop;
-                D: Vite UI against docs/fixtures/ws_events.jsonl; C: 300-target live cache
-DEMO RISK:      full live cache not downloaded; real-data scores unmeasured;
-                ci.yml is still at repo root; only vetting challenger clears the gate
+                D: Vite UI against docs/fixtures/ws_events.jsonl; C: hand B the four
+                live run_record.json rows (verdicts PENDING)
+DEMO RISK:      only 297 of 1,500 live targets; the live gate has no KEEP yet (stub run
+                supplies the KEEP example); ci.yml still at repo root; 32-row live test
+                means one flipped target moves F1 ~0.03 - always quote n
 ```
 
 ## 2. Owners (one owner per module, at any moment)

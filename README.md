@@ -118,11 +118,12 @@ python -m ml_sandbox.build_cache --mode live --targets 1500 --workers 3
 python -m ml_sandbox.train --config ../runs/baseline_live.json --out ../artifacts/live-baseline
 ```
 
-The live path was smoke-tested on 12 real Kepler targets. Downloads are
+The live path is scored on 297 real Kepler targets (300 requested, 3 skipped) with the
+frozen live split v1. Champion F1 0.933 / AUC 0.984 on the 32-row primary test split;
+full numbers and caveats are in [docs/ML.md](docs/ML.md). Downloads are
 process-isolated (`--workers 3`): astroquery is not thread-safe. Targets sharing a
 host star reuse one download, since KOI rows are planets rather than stars.
-Measured ~20s per target effective; a 300-target demo subset is ~75-90 minutes, so
-plan the download budget (the full 1,500 is ~6-7 hours).
+Measured ~12s per target effective on this cache; the full 1,500 is ~6-7 hours.
 
 ## Contracts
 

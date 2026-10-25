@@ -20,14 +20,17 @@ even mid-day, even for one hour. Four questions, no essays. Newest at top.
    Expected: 1,500 targets in ~12 s, dataset fingerprint
    `ee1f7e04226f8e7b0ca68b3bd4dd8527877bac17`; baseline F1 0.8372/AUC 0.8988;
    vetting challenger F1 0.9305/AUC 0.9833; 59 tests passed.
-   Live MAST path: 12 real targets cached; same fingerprint with 1 or 3 workers.
-   Full 1,500-target live cache not downloaded.
+   Live MAST path: 297 real Kepler targets cached (300 requested, 3 skipped),
+   live split v1 (208/45/44, primary test 32 with 14 positives): champion F1
+   0.9333/AUC 0.9841; vetting challenger F1 0.9333/AUC 0.9960 -> REJECT;
+   class-weight 0.9286 and CNN 0.7368 -> REJECT. A clean-tree replay reproduced
+   every metric. The full 1,500-target live cache is still not downloaded.
 
 2. WHAT IS BROKEN:  `backend/app/`, `frontend/` and the orchestrator do not exist yet.
                     `promote()` is not wired; ML records stay `verdict: PENDING`.
-                    No real-data test metrics yet: stub only, and 12 live targets
-                    are too few for three non-empty splits.
                     CI is inactive; `ci.yml` is still at repo root.
+                    The live gate has no KEEP: the champion already sits at the
+                    14-positive ceiling, so every live challenger ties or loses.
 
 3. NEXT ACTIONS:    (1) B: build FastAPI + registry + `promote()`, ingest
                     `artifacts/<run>/run_record.json`; use
@@ -37,8 +40,8 @@ even mid-day, even for one hour. Four questions, no essays. Newest at top.
                     `docs/fixtures/proposal.example.json`.
                     (3) D: build the Vite UI against
                     `docs/fixtures/ws_events.jsonl`, then switch to B's socket.
-                    (4) C: download a 300-target live cache (~75-90 min at
-                    `--workers 3`), score baseline and vetting challenger once.
+                    (4) C: hand B the four live `run_record.json` rows; only if the
+                    team accepts a full re-score, grow the cache and bump to split v2.
 
 4. WATCH OUT:       Frozen split v1 is immutable. Never rebuild the cache with a
                     different target set under the same split version; bump

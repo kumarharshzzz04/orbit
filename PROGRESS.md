@@ -16,6 +16,28 @@ NOTE:    decisions, surprises, gotchas the next person needs
 
 ---
 
+## 2026-10-25 16:45 - Member C (ML)
+DONE: real-data ML is frozen. 297 live Kepler targets cached (300 requested, 3 skipped,
+      190 hosts, 2,376 s at 3 workers; dataset fp 3826e7f3..., live split v1 fp
+      d8aa6b99...; train 208 / val 45 / test 44, primary test 32 with 14 positives).
+      All four configs retrained on it: champion F1 0.9333 / AUC 0.9841 / acc 0.9375
+      (2 FP: K03492.01 p=0.995, K04641.01 p=0.951); vetting challenger F1 0.9333 /
+      AUC 0.9960 -> REJECT (no F1 gain); class-weight F1 0.9286, CNN F1 0.7368 ->
+      REJECT. Clean-tree replay of the champion reproduced every metric and both
+      fingerprints. 59 tests green.
+NEXT: B ingests the four live run_record.json rows and runs promote(); C hands over and
+      supports the demo; only bump to split v2 + bigger cache if the team accepts a full
+      re-score.
+BLOCKED: none
+NOTE: the live gate has no KEEP. That is a real result, not a bug: with 14 test positives
+      the champion already sits at the ceiling, and the two false positives are just above
+      the val threshold of 0.94. Raising the threshold to 0.96 would score 1.0 and is
+      test-set fitting - do not do it, do not promote it. Stub mode still supplies a KEEP
+      example for the demo (vetting challenger F1 0.930 vs 0.837). Every live number must
+      be quoted with n and the confusion matrix.
+
+---
+
 ## 2026-10-25 15:10 - Member C (ML)
 DONE: handoff complete. Added shared fixtures (`docs/fixtures/ws_events.jsonl`,
       registry rows, one-change proposal), real handover block, per-role start
