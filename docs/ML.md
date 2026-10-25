@@ -11,7 +11,7 @@ learning on Kepler photometry - we aim for a credible demo model, not SOTA.
 
 | Gate | State |
 |---|---|
-| CP-1 data | **Stub**: 1,500 deterministic targets cached. **Live**: 297 real Kepler targets cached from a 300-target request (3 skipped, resumable), 190 host stars deduplicated, 2,376 s at 3 workers. |
+| CP-1 data | **Stub**: 1,500 deterministic targets cached. **Live**: 297 real Kepler targets cached from a 300-target request (3 skipped, resumable), 294 host stars (145 FALSE POSITIVE / 89 CONFIRMED / 63 CANDIDATE), 2,376 s at 3 workers. |
 | CP-1 baseline | **Working**: stub F1 0.837, AUC 0.899 (n=224). **Live** F1 0.933, AUC 0.984, accuracy 0.938 on the frozen live test split (n=32 primary, 44 candidate-inclusive). |
 | CP-2 CNN | **Working**: stub F1 0.821. **Live** F1 0.737, AUC 0.706 - underfits at 208 training rows. Honest negative result. |
 | CP-2 challenger | **Stub**: vetting-feature GBM F1 0.930, AUC 0.983 -> clears the gate. **Live**: vetting features tie the champion on F1 (0.9333) with higher AUC (0.996), so the strict gate REJECTS it; class-weight 0.929 and CNN 0.737 also fail the F1 bar. |
@@ -23,7 +23,7 @@ learning on Kepler photometry - we aim for a credible demo model, not SOTA.
 
 ## Live results (2026-10-25, real Kepler/MAST data)
 
-297 targets, 190 host stars, frozen live split v1: train 208 / val 45 / test 44
+297 targets, 294 host stars, frozen live split v1: train 208 / val 45 / test 44
 (primary 32 with 14 positives; the other 12 test rows are CANDIDATE and are
 scored separately). Same seed, same harness, same threshold rule for all four.
 

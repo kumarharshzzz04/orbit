@@ -18,7 +18,7 @@ NOTE:    decisions, surprises, gotchas the next person needs
 
 ## 2026-10-25 16:45 - Member C (ML)
 DONE: real-data ML is frozen. 297 live Kepler targets cached (300 requested, 3 skipped,
-      190 hosts, 2,376 s at 3 workers; dataset fp 3826e7f3..., live split v1 fp
+      294 hosts (145 FP / 89 CONFIRMED / 63 CANDIDATE), 2,376 s at 3 workers; dataset fp 3826e7f3..., live split v1 fp
       d8aa6b99...; train 208 / val 45 / test 44, primary test 32 with 14 positives).
       All four configs retrained on it: champion F1 0.9333 / AUC 0.9841 / acc 0.9375
       (2 FP: K03492.01 p=0.995, K04641.01 p=0.951); vetting challenger F1 0.9333 /
