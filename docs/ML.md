@@ -59,7 +59,18 @@ The champion's two false positives are **K03492.01** (p=0.9954) and
 Both sit just above the val-selected threshold of 0.94 (the vetting challenger at
 its 0.80 threshold flags the same two). With 14 positives, the champion already
 sits at the split's practical ceiling: any challenger must remove one of those
-two near-threshold eclipsing-binary lookalikes without losing recall.
+two near-threshold false positives without losing recall.
+
+Their catalog rows explain why they are hard and why a shape feature does not
+rescue them: both are shallow, low-SNR signals (depths 101 and 116 ppm, model
+SNR 13.6 and 9.0, radii 1.5 and 1.26 R-earth, impact parameters 0.71 and 0.03)
+whose transit depths match the catalog radius ratio, i.e. consistent shallow
+transits with a blend-like dilution rather than deep eclipsing binaries. The
+discriminating evidence for that regime is centroid motion and imaging, which
+this pipeline does not ingest. Candidate fold-shape features were tested on the
+cached folds and did not separate the classes (best single-feature AUC 0.63, and
+inverted at 0.44), so they were **not** added - recorded here so nobody
+re-invents them at 2 a.m.
 
 **Do not chase that.** Raising the threshold to 0.96 yields a perfect 1.0 on this
 32-row test set and would be pure test-set fitting; it is not a model change and
@@ -289,7 +300,11 @@ rows with the Evaluator's diagnosis - negative results are assets.
 14. **Two live false positives sit just above threshold.** That is the whole gap
     to the vetting challenger. Do not fix it by moving the threshold after seeing
     test; that is test-set fitting and the gate would rightly reject the run as
-    not a real improvement.
+    not a real improvement. Both are shallow (100-116 ppm), low-SNR (9-14) signals
+    that need centroid motion, which the cache does not carry.
+15. **Fold-shape one-liners are a dead end.** Width-at-fraction-of-depth and
+    ingress asymmetry features scored AUC 0.44-0.63 on the live folds; they would
+    have added noise. Do not ship them without a real transit model fit.
 
 ## Definition of done for the ML handoff to B
 
