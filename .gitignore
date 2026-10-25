@@ -1,0 +1,36 @@
+# Secrets - never commit real keys (AGENTS.md §5)
+.env
+.env.*
+!.env.example
+
+# Frozen data caches and experimental artifacts are local, not source
+data/
+artifacts/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Frontend
+node_modules/
+dist/
+.vite/
+
+# Freebuff project marker (local only)
+.freebuff/
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Demo backups (large, keep them on two devices, not in git)
+backup/

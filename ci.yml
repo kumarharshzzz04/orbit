@@ -1,0 +1,99 @@
+# ORBIT CI - same four stages as the original pipeline, now on GitHub Actions.
+# Free-tier runners only. Nothing here depends on paid features.
+
+name: ORBIT CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:   # manual "Run workflow" button in the Actions tab (used to opt in to progress-guard)
+
+jobs:
+  lint:
+    name: lint (python)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install ruff black
+      - run: ruff check backend
+      - run: black --check backend
+
+  lint-frontend:
+    name: lint (frontend)
+    runs-on: ubuntu-latest
+    continue-on-error: true   # tighten after CP-1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm ci
+        working-directory: frontend
+      - run: npx eslint src --max-warnings 20
+        working-directory: frontend
+
+  test:
+    name: test (pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r backend/requirements.txt pytest
+      - run: python -m pytest tests -q --junitxml=report.xml
+        working-directory: backend
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-report
+          path: backend/report.xml
+
+  # Proves the app boots and a mock mission returns a verdict - the "walking skeleton" gate.
+  smoke:
+    name: smoke (mock mission)
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      LLM_MODE: mock
+      DATA_MODE: stub
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r backend/requirements.txt httpx
+      - run: python -m pytest tests/test_smoke.py -q
+        working-directory: backend
+
+  # Hackathon discipline: the repo must show signs of life every 6h (Day 1-3 window).
+  # Opt-in: Actions tab -> ORBIT CI -> "Run workflow". To make it automatic every
+  # 6h during the sprint, uncomment the schedule block at the bottom, then delete
+  # it after the hackathon.
+  progress-guard:
+    name: guard (PROGRESS.md freshness)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history, so the last commit that touched PROGRESS.md is visible
+      - name: Check PROGRESS.md freshness
+        run: |
+          LAST=$(git log -1 --format=%at -- PROGRESS.md)
+          NOW=$(date +%s)
+          AGE=$(( (NOW - LAST) / 3600 ))
+          echo "PROGRESS.md last updated ${AGE}h ago"
+          if [ "$AGE" -ge 6 ]; then
+            echo "FAIL: no PROGRESS.md entry in 6h - update the log (AGENTS.md session rule)"
+            exit 1
+          fi
+
+# schedule:
+#   - cron: "0 */6 * * *"   # auto-run every 6h during the sprint weekend
