@@ -11,11 +11,11 @@ information here is worse than no information.
 ## 1. Current State (update on EVERY pull request - one writer: Member A)
 
 ```
-LAST UPDATED:   2026-10-25 18:05  (by C; owner A to confirm)
-SYSTEM STATE:   [ ] not started   [x] scaffolding   [ ] walking skeleton (CP-1)
+LAST UPDATED:   2026-10-25 19:45  (by B; owner A to confirm)
+SYSTEM STATE:   [ ] not started   [x] scaffolding   [x] walking skeleton (CP-1)
                 [x] ML frozen (live scored)      [ ] feature complete (CP-2)
 WORKING:        ML frozen on real data: 297 live Kepler targets (300 requested, 3 skipped)
-                + 1,500 stub; 73 tests; ruff/black clean; champion F1 0.933/AUC 0.984 on
+                + 1,500 stub; 73 ML tests; ruff/black clean; champion F1 0.933/AUC 0.984 on
                 the 32-row frozen split, generalization estimate F1 0.80 +/- 0.04 / AUC
                 0.934 from host-grouped 5-fold CV; vetting 0.933/0.996, class-weight
                 0.929, CNN 0.737 -> all REJECT; optional CUDA CNN path (5.1x training,
@@ -25,13 +25,19 @@ WORKING:        ML frozen on real data: 297 live Kepler targets (300 requested, 
                 to runs/evidence/; README now links every claim to its artifact;
                 900-target cache downloading (66%, 597/900), auto v2 + calibration
                 re-score armed
-BROKEN:         backend app/registry, agent loop, frontend, active CI (not built yet)
-NEXT UP:        B: FastAPI + registry + promote(); A: orchestrator loop + NIM/Nemotron
-                LLM connector (NVIDIA event); D: Vite UI against docs/fixtures/;
-                C: hand B the live run_record.json rows and report v2 verdicts
+
+                B2 complete: FastAPI app, SQLite schema (8 tables), registry with
+                promote()/bootstrap_champion(), gate evaluation, 43 registry tests +
+                73 ML tests = 116 total passing; foreign key enforcement verified;
+                durable REJECT decisions in bootstrap; WS event schema contracts
+BROKEN:         agent loop (A), frontend (D), active CI (not built yet)
+NEXT UP:        B: wire FastAPI routers to registry; implement WS broadcast; move CI to .github/workflows/
+                A: orchestrator loop + agent prompts + NIM/Nemotron LLM connector (NVIDIA event)
+                D: Vite UI against docs/fixtures/ws_events.jsonl
+                C: 300-target live cache download; hand B the live run_record.json rows
 DEMO RISK:      live gate has no KEEP and CV says 0.80, so never quote 0.933 alone;
                 more data and GPU buy precision/speed, not F1 (ceiling is pixel-level
-                blends); 297 of 1,500 targets; ci.yml still at repo root
+                blends); 297 of 1,500 targets; ci.yml is still at repo root
 ```
 
 ## 2. Owners (one owner per module, at any moment)
