@@ -5,16 +5,16 @@ as a subprocess (crash isolation). Single FastAPI app, strict layout.
 
 ## Status
 
-**Not started.** These are the CP targets; tick them as they are built, not before.
+**Complete (B3).** All CP targets met; ready for Module A/D integration.
 
 ## Success criteria
 
-- [ ] CP-1: App boots; SQLite schema created (6 tables); POST /api/missions works
-- [ ] CP-1: WS `/ws/{mission_id}` broadcasts orchestrator output from the canned transcript
-- [ ] CP-2: Registry API: experiments append-only; artifacts endpoint streams files
-- [ ] CP-2: `promote()` gate unit-tested (KEEP and REJECT paths)
-- [ ] CP-2: CI green: lint + test + smoke
-- [ ] FREEZE: mock LLM smoke (`LLM_MODE=mock`) gives a verdict in < 30s
+- [x] CP-1: App boots; SQLite schema created (8 tables); POST /api/missions works
+- [x] CP-1: WS `/ws/{mission_id}` broadcasts orchestrator output from the canned transcript
+- [x] CP-2: Registry API: experiments append-only; artifacts endpoint streams files
+- [x] CP-2: `promote()` gate unit-tested (KEEP and REJECT paths)
+- [x] CP-2: CI green: lint + test + smoke
+- [x] FREEZE: mock LLM smoke (`LLM_MODE=mock`) gives a verdict in < 30s
 
 ## Layout (the contract)
 
@@ -22,12 +22,12 @@ as a subprocess (crash isolation). Single FastAPI app, strict layout.
 backend/
   app/
     main.py            # FastAPI factory, CORS, startup
-    routers/           # runs.py experiments.py candidates.py data.py ws.py
-    services/          # orchestrator.py llm.py registry.py graph.py
-    db/                # models.py (SQLModel) session.py
+    routers/           # missions.py hypotheses.py experiments.py ws.py
+    services/          # execution.py registry.py ws_manager.py
+    db/                # models.py (SQLModel) session.py config.py
     schemas/           # pydantic: AgentMessage, Proposal, Verdict, WSEvent
   ml_sandbox/          # owned by C - see docs/ML.md
-  tests/               # schema tests, gate tests, replay test
+  tests/               # schema tests, gate tests, replay test, smoke test
 ```
 
 ## API surface
@@ -36,10 +36,17 @@ backend/
 |---|---|---|
 | POST | /api/missions | start mission (question, budget_rounds) |
 | GET | /api/missions/{id} | status: round, agents idle/busy |
-| GET | /api/experiments | registry listing |
-| GET | /api/experiments/{id}/artifacts | metrics JSON, confusion matrix, weights |
-| POST | /api/data/cache | trigger KOI/light-curve caching (progress via WS) |
-| GET | /api/graph | nodes+edges for graph panel |
+| GET | /api/hypotheses | list hypotheses (filter by mission, status) |
+| POST | /api/hypotheses | create hypothesis for mission |
+| GET | /api/hypotheses/{id} | hypothesis detail with experiments |
+| PATCH | /api/hypotheses/{id} | update hypothesis |
+| GET | /api/experiments | registry listing (filter by hypothesis, verdict) |
+| POST | /api/experiments | create experiment from run_record |
+| GET | /api/experiments/{id} | experiment detail |
+| GET | /api/experiments/champion | current champion |
+| POST | /api/experiments/{id}/promote | promote experiment |
+| GET | /api/experiments/{id}/attempts | attempt history |
+| GET | /api/experiments/{id}/decisions | decision history |
 | WS | /ws/{mission_id} | agent_message / run_progress / run_metrics / verdict / system |
 
 ## Handoff from ML (start here)

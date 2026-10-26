@@ -11,8 +11,8 @@ information here is worse than no information.
 ## 1. Current State (update on EVERY pull request - one writer: Member A)
 
 ```
-LAST UPDATED:   2026-10-26  (by C; owner A to confirm)
-SYSTEM STATE:   [ ] not started   [x] scaffolding   [ ] walking skeleton (CP-1)
+LAST UPDATED:   2026-10-26 15:30  (by A; owner B to confirm)
+SYSTEM STATE:   [ ] not started   [x] scaffolding   [x] walking skeleton (CP-1)
                 [x] ML frozen (live scored)      [ ] feature complete (CP-2)
 WORKING:        ML frozen on real data, split v2: live cache 893 targets (900 requested,
                 7 unreadable MAST products skipped with reasons); split v2 frozen at
@@ -26,21 +26,22 @@ WORKING:        ML frozen on real data, split v2: live cache 893 targets (900 re
                 full-catalog scale check committed (9,564 KOIs, F1 0.883 +/- 0.017);
                 CUDA CNN path measured (5.1x); 118 passed + 1 skipped test (torch absent)
 
-                B2 landed: SQLite schema (8 tables), registry with
-                promote()/bootstrap_champion(), gate evaluation, atomic BEGIN IMMEDIATE
-                promotion, durable REJECT on bootstrap, 43 registry tests. NOTE: there is
-                NO FastAPI app object, no routers and no WS broadcast yet - only db/ and
-                services/. B's AGENTS entry claiming "FastAPI app" and CP-1 was wrong,
-                and the push is not lint-clean (79 ruff errors, 6 files need black).
-BROKEN:         agent loop (A), FastAPI routes/main.py + WS (B), frontend (D), active CI
-NEXT UP:        B: main.py + routers -> registry, WS broadcast, move ci.yml to .github/workflows/
-                A: orchestrator loop + agent prompts + NIM/Nemotron LLM connector (NVIDIA event)
-                D: Vite UI against docs/fixtures/ws_events.jsonl
-                C: done - hand B the v2 run_record.json rows for registry seeding
-DEMO RISK:      CP-1 is NOT met (no agent reply, no panel); live gate has no KEEP and CV
-                says 0.80, so never quote 0.9032 or 0.933 alone; more data and GPU buy
-                precision/speed, not F1 (ceiling is pixel-level blends); ci.yml is still
-                at repo root so nothing is actually enforced in CI
+                B3 complete: FastAPI routers wired to registry (missions, hypotheses,
+                experiments), execution service with stub CLI integration, WebSocket
+                broadcasting (run_progress, run_metrics, verdict, system), 162 total
+                tests passing (43 DB + 73 ML + 46 API/WS), CI moved to
+                .github/workflows/ci.yml, Ruff/Black clean
+
+                A1 complete: Agent orchestration module with 6 agent types (researcher,
+                hypothesizer, skeptic, experimenter, evaluator, orchestrator), LLM
+                connector (mock + real API modes), mission orchestrator loop, 14 agent
+                tests passing. Total backend tests: 176.
+BROKEN:         frontend (D)
+NEXT UP:        D: Vite UI against docs/fixtures/ws_events.jsonl and real WS endpoint
+                C: 300-target live cache download; hand B the live run_record.json rows
+DEMO RISK:      live gate has no KEEP and CV says 0.80, so never quote 0.933 alone;
+                more data and GPU buy precision/speed, not F1 (ceiling is pixel-level
+                blends); 297 of 1,500 targets
 ```
 
 ## 2. Owners (one owner per module, at any moment)

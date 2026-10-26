@@ -4,28 +4,28 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Optional
 
 from sqlalchemy import text
 from sqlmodel import Session, select
 
 from ..db.models import (
-    Experiment,
-    ExperimentDecision,
-    ExperimentAttempt,
-    Verdict,
     ExecutionStatus,
+    Experiment,
+    ExperimentAttempt,
+    ExperimentDecision,
+    Verdict,
 )
-from ..db.session import immediate_transaction, get_current_champion
-
+from ..db.session import get_current_champion, immediate_transaction
 
 # =============================================================================
 # Gate Evaluation
 # =============================================================================
 
+
 @dataclass(frozen=True)
 class GateResult:
     """Result of gate evaluation."""
+
     verdict: Verdict
     rationale: str
 
@@ -36,7 +36,7 @@ NULL_CHAMPION_AUC = 0.5
 
 
 def _evaluate_gate(
-    champion: Optional[Experiment],
+    champion: Experiment | None,
     challenger: Experiment,
     margin: float = 0.0,
 ) -> GateResult:
@@ -69,18 +69,24 @@ def _evaluate_gate(
     if better_f1 and safe_auc:
         return GateResult(
             Verdict.KEEP,
-            f"beats champion {ch_id} on F1 ({c_f1:.4f} > {ch_f1:.4f}), AUC not degraded ({c_auc:.4f} >= {ch_auc:.4f})"
+            f"beats champion {ch_id} on F1 ({c_f1:.4f} > {ch_f1:.4f}), AUC not degraded ({c_auc:.4f} >= {ch_auc:.4f})",
         )
 
     # Diagnosis for rejection
     if not better_f1:
-        return GateResult(Verdict.REJECT, f"F1 {c_f1:.4f} does not beat champion {ch_f1:.4f} (margin={margin})")
-    return GateResult(Verdict.REJECT, f"AUC {c_auc:.4f} degrades below champion {ch_auc:.4f}")
+        return GateResult(
+            Verdict.REJECT,
+            f"F1 {c_f1:.4f} does not beat champion {ch_f1:.4f} (margin={margin})",
+        )
+    return GateResult(
+        Verdict.REJECT, f"AUC {c_auc:.4f} degrades below champion {ch_auc:.4f}"
+    )
 
 
 # =============================================================================
 # Registry Operations
 # =============================================================================
+
 
 def insert_experiment(session: Session, run_record: dict) -> Experiment:
     """
@@ -102,7 +108,9 @@ def insert_experiment(session: Session, run_record: dict) -> Experiment:
         artifact_path=run_record["artifact_path"],
         verdict=Verdict.PENDING,
         diagnosis=run_record.get("diagnosis"),
-        created_at=run_record.get("created_at", datetime.now(UTC).isoformat(timespec="seconds")),
+        created_at=run_record.get(
+            "created_at", datetime.now(UTC).isoformat(timespec="seconds")
+        ),
         replayable=run_record.get("replayable", False),
         model=run_record.get("model"),
         model_family=run_record.get("model_family"),
@@ -181,7 +189,9 @@ def _record_decision(
     return decision
 
 
-def promote(session: Session, challenger_id: str, margin: float = 0.0) -> tuple[Verdict, str]:
+def promote(
+    session: Session, challenger_id: str, margin: float = 0.0
+) -> tuple[Verdict, str]:
     """
     Atomic promotion using BEGIN IMMEDIATE transaction.
 
@@ -211,10 +221,15 @@ def promote(session: Session, challenger_id: str, margin: float = 0.0) -> tuple[
 
         # 3. CRITICAL: Check if decision already exists (inside transaction!)
         existing_decision = session.exec(
-            select(ExperimentDecision).where(ExperimentDecision.challenger_id == challenger_id)
+            select(ExperimentDecision).where(
+                ExperimentDecision.challenger_id == challenger_id
+            )
         ).first()
         if existing_decision:
-            return Verdict.REJECT, f"already decided: {existing_decision.verdict.value} ({existing_decision.rationale})"
+            return (
+                Verdict.REJECT,
+                f"already decided: {existing_decision.verdict.value} ({existing_decision.rationale})",
+            )
 
         # 4. Evaluate gate
         result = _evaluate_gate(champion, challenger, margin)
@@ -356,5 +371,7 @@ def record_attempt_completion(
 def get_decision(session: Session, challenger_id: str) -> ExperimentDecision | None:
     """Get the decision for a challenger."""
     return session.exec(
-        select(ExperimentDecision).where(ExperimentDecision.challenger_id == challenger_id)
+        select(ExperimentDecision).where(
+            ExperimentDecision.challenger_id == challenger_id
+        )
     ).first()

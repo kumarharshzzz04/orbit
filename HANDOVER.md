@@ -5,7 +5,48 @@ even mid-day, even for one hour. Four questions, no essays. Newest at top.
 
 ---
 
-## 2026-10-25 19:45 - B2 Backend (Registry + Persistence) : B -> A/D (ready to integrate)
+## 2026-10-26 16:00 - A1 Agent Orchestration : A -> B/D (complete - all tests pass)
+
+1. WHAT WORKS:
+
+   ```bash
+   cd backend
+   python -m pytest tests/ -q  # 176 tests pass in ~96s
+   python -m pytest tests/test_agents.py -v  # Agent orchestration tests
+   python -m pytest tests/test_smoke.py -v  # Full lifecycle smoke test
+   ```
+
+   Module A complete:
+   - 6 agent types: researcher, hypothesizer, skeptic, experimenter, evaluator, orchestrator
+   - LLM connector with mock mode (fixture-driven) and real API mode (OpenAI-compatible)
+   - Mission orchestrator with configurable rounds, agent sequence, auto-promotion
+   - AgentContext for passing mission state between agents
+   - AgentMessage with WebSocket payload conversion
+   - Agents integrate with backend: hypothesis creation, experiment execution, promotion
+   - 14 new agent tests passing
+   - Total backend tests: 176 (162 original + 14 new)
+   - Ruff/Black clean
+   - Full end-to-end integration tested: mission creation → hypothesis → experiment → bootstrap champion → gate evaluation
+
+2. WHAT'S INCOMPLETE:
+   - Frontend React app (Module D)
+   - Live data cache download (Module C)
+
+3. KEY FILES TOUCHED:
+   - app/services/{agents,orchestrator,llm_connector}.py (NEW)
+   - app/services/__init__.py (updated exports)
+   - app/services/execution.py (updated execute_experiment to register experiments)
+   - app/services/registry.py (bootstrap_champion integration)
+   - tests/test_agents.py (NEW - 14 tests)
+   - AGENTS.md (updated status)
+
+4. BLOCKERS/NOTES:
+   - None for Module A - ready for Module D integration
+   - Mock mode uses docs/fixtures/ws_events.jsonl
+   - Real LLM mode needs LLM_API_KEY in .env
+   - Orchestrator started via start_mission_orchestrator(mission_id)
+   - WebSocket events match AGENTS.md 3.1 schema exactly
+   - Bootstrap champion auto-creates on first experiment if no champion exists
 
 1. WHAT WORKS:
 

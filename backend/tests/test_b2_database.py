@@ -5,44 +5,39 @@ from __future__ import annotations
 import json
 import tempfile
 import threading
-import time
 from pathlib import Path
 
 import pytest
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
-from app.db.config import create_engine_with_pragmas, reset_database
+from app.db.config import create_engine_with_pragmas
 from app.db.models import (
-    Mission,
-    Hypothesis,
+    ExecutionStatus,
     Experiment,
     ExperimentDecision,
-    ExperimentAttempt,
-    Paper,
     GraphEdge,
+    Hypothesis,
     Message,
-    Verdict,
-    ExecutionStatus,
+    Mission,
     MissionStatus,
-    HypothesisStatus,
+    Paper,
+    Verdict,
 )
-from app.db.session import immediate_transaction, get_current_champion
 from app.services.registry import (
+    _evaluate_gate,
+    bootstrap_champion,
+    get_decision,
     insert_experiment,
     promote,
-    bootstrap_champion,
-    _evaluate_gate,
-    record_attempt_start,
     record_attempt_completion,
-    get_decision,
-    NULL_CHAMPION_F1,
-    NULL_CHAMPION_AUC,
+    record_attempt_start,
 )
-
 
 # =============================================================================
 # Fixtures
 # =============================================================================
+
 
 @pytest.fixture(scope="function")
 def temp_db():
@@ -52,8 +47,10 @@ def temp_db():
 
     engine = create_engine_with_pragmas(db_path)
     # Import models to register them
-    from app.db import models  # noqa: F401
     from sqlmodel import SQLModel
+
+    from app.db import models  # noqa: F401
+
     SQLModel.metadata.create_all(engine)
     engine.dispose()
 
@@ -68,8 +65,10 @@ def session(temp_db):
     """Get a session for the temp database."""
     engine = create_engine_with_pragmas(temp_db)
     # Ensure models are imported
-    from app.db import models  # noqa: F401
     from sqlmodel import SQLModel
+
+    from app.db import models  # noqa: F401
+
     SQLModel.metadata.create_all(engine)
     with Session(engine) as session:
         yield session
@@ -94,7 +93,7 @@ def sample_run_record():
             "precision": 0.92,
             "recall": 0.94,
             "f1": 0.93,
-            "roc_auc": 0.98
+            "roc_auc": 0.98,
         },
         "artifact_path": "artifacts/test_experiment_001/",
         "verdict": "PENDING",
@@ -119,18 +118,25 @@ def sample_run_record():
 # Schema and Model Tests
 # =============================================================================
 
+
 def test_all_tables_created(temp_db):
     """All required tables can be created."""
     engine = create_engine_with_pragmas(temp_db)
-    from sqlmodel import SQLModel
+
     from app.db import models  # noqa: F401
 
-    inspector = __import__('sqlalchemy').inspect(engine)
+    inspector = __import__("sqlalchemy").inspect(engine)
     tables = inspector.get_table_names()
 
     expected = {
-        "missions", "hypotheses", "experiments", "experiment_decisions",
-        "experiment_attempts", "papers", "graph_edges", "messages"
+        "missions",
+        "hypotheses",
+        "experiments",
+        "experiment_decisions",
+        "experiment_attempts",
+        "papers",
+        "graph_edges",
+        "messages",
     }
     for table in expected:
         assert table in tables, f"Missing table: {table}"
@@ -222,14 +228,16 @@ def test_foreign_key_enforcement(temp_db):
     """Foreign key constraints are enforced."""
     engine = create_engine_with_pragmas(temp_db)
     from sqlmodel import SQLModel
+
     from app.db import models  # noqa: F401
+
     SQLModel.metadata.create_all(engine)
 
     with Session(engine) as session:
         # Try to insert hypothesis with non-existent mission
         hypothesis = Hypothesis(id="h1", mission_id="nonexistent", proposal_json="{}")
         session.add(hypothesis)
-        with pytest.raises(Exception):  # Should raise integrity error
+        with pytest.raises(IntegrityError):
             session.commit()
 
 
@@ -288,7 +296,7 @@ def test_unique_constraint_experiment_decision_challenger(session):
         rationale="Test2",
     )
     session.add(decision2)
-    with pytest.raises(Exception):  # Should raise integrity error
+    with pytest.raises(IntegrityError):  # Should raise integrity error
         session.commit()
 
 
@@ -346,7 +354,7 @@ def test_unique_constraint_experiment_decision_verdict(session):
         rationale="Test2",
     )
     session.add(decision2)
-    with pytest.raises(Exception):  # Should raise integrity error
+    with pytest.raises(IntegrityError):  # Should raise integrity error
         session.commit()
 
 
@@ -361,6 +369,7 @@ def test_execution_status_enum():
 # =============================================================================
 # Experiment Attempt Tests
 # =============================================================================
+
 
 def test_attempt_starts_as_running(session):
     """Attempt starts as RUNNING."""
@@ -391,7 +400,7 @@ def test_successful_attempt_links_to_experiment(session, sample_run_record):
     session.add(hypothesis)
     session.commit()
 
-    attempt = record_attempt_start(session, "attempt1", "m1", "H-001", "config.json")
+    _ = record_attempt_start(session, "attempt1", "m1", "H-001", "config.json")
     session.commit()
 
     # Insert experiment (simulating successful completion)
@@ -423,7 +432,7 @@ def test_failed_attempt_no_experiment_created(session):
     session.add(hypothesis)
     session.commit()
 
-    attempt = record_attempt_start(session, "attempt1", "m1", "h1", "config.json")
+    _ = record_attempt_start(session, "attempt1", "m1", "h1", "config.json")
     session.commit()
 
     # Record failure - no experiment created
@@ -454,7 +463,7 @@ def test_cancelled_attempt_represented_correctly(session):
     session.add(hypothesis)
     session.commit()
 
-    attempt = record_attempt_start(session, "attempt1", "m1", "h1", "config.json")
+    _ = record_attempt_start(session, "attempt1", "m1", "h1", "config.json")
     session.commit()
 
     updated = record_attempt_completion(
@@ -484,7 +493,7 @@ def test_error_messages_bounded(session):
     session.add(hypothesis)
     session.commit()
 
-    attempt = record_attempt_start(session, "attempt1", "m1", "h1", "config.json")
+    _ = record_attempt_start(session, "attempt1", "m1", "h1", "config.json")
     session.commit()
 
     updated = record_attempt_completion(
@@ -505,6 +514,7 @@ def test_error_messages_bounded(session):
 # =============================================================================
 # Registry Tests
 # =============================================================================
+
 
 def test_insert_experiment_creates_pending_record(session, sample_run_record):
     """insert_experiment creates PENDING experiment record."""
@@ -703,14 +713,13 @@ def test_duplicate_decision_insertion_fails_at_db_level(session, sample_run_reco
         rationale="Duplicate",
     )
     session.add(decision)
-    with pytest.raises(Exception):
+    with pytest.raises(IntegrityError):
         session.commit()
 
 
 def test_bootstrap_uses_same_gate_as_promote(session, sample_run_record):
     """Bootstrap uses the same evaluation gate as ordinary promotion."""
     # Verify _evaluate_gate is used by both
-    import app.services.registry as reg
 
     # Check that bootstrap_champion calls _evaluate_gate with None champion
     # We can't easily mock, but we can test the behavior matches
@@ -740,7 +749,13 @@ def test_bootstrap_null_champion_floor(session):
         "dataset_fingerprint": "fp1",
         "split_fingerprint": "split1",
         "split_version": "v1",
-        "metrics": {"accuracy": 0.5, "precision": 0.0, "recall": 0.0, "f1": 0.0, "roc_auc": 0.5},
+        "metrics": {
+            "accuracy": 0.5,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "roc_auc": 0.5,
+        },
         "artifact_path": "artifacts/bootstrap_fail_f1/",
         "verdict": "PENDING",
         "diagnosis": None,
@@ -754,6 +769,7 @@ def test_bootstrap_null_champion_floor(session):
     # Verify REJECT decision was persisted (not rolled back) - use fresh session
     engine = session.get_bind()
     from sqlmodel import Session as Sess
+
     with Sess(engine) as fresh_session:
         decisions = list(fresh_session.exec(select(ExperimentDecision)).all())
         assert len(decisions) == 1
@@ -810,7 +826,13 @@ def test_bootstrap_rejection_persisted(session):
         "dataset_fingerprint": "fp1",
         "split_fingerprint": "split1",
         "split_version": "v1",
-        "metrics": {"accuracy": 0.5, "precision": 0.0, "recall": 0.0, "f1": 0.0, "roc_auc": 0.5},
+        "metrics": {
+            "accuracy": 0.5,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "roc_auc": 0.5,
+        },
         "artifact_path": "artifacts/bootstrap_reject/",
         "verdict": "PENDING",
         "diagnosis": None,
@@ -842,13 +864,16 @@ def test_bootstrap_rejection_persisted(session):
 # Concurrency Tests
 # =============================================================================
 
+
 def test_two_sessions_serialize_promotion(temp_db, sample_run_record):
     """Two independent sessions serialize promotion via BEGIN IMMEDIATE."""
     from app.db.config import create_engine_with_pragmas
 
     engine = create_engine_with_pragmas(temp_db)
     from sqlmodel import SQLModel
+
     from app.db import models  # noqa: F401
+
     SQLModel.metadata.create_all(engine)
 
     # Setup data in first session
@@ -875,14 +900,14 @@ def test_two_sessions_serialize_promotion(temp_db, sample_run_record):
         challenger_a["hypothesis_id"] = "h1"
         challenger_a["metrics"]["f1"] = 0.900
         challenger_a["metrics"]["roc_auc"] = 0.950
-        exp_a = insert_experiment(session, challenger_a)
+        _ = insert_experiment(session, challenger_a)
 
         challenger_b = sample_run_record.copy()
         challenger_b["id"] = "challenger_b"
         challenger_b["hypothesis_id"] = "h1"
         challenger_b["metrics"]["f1"] = 0.920
         challenger_b["metrics"]["roc_auc"] = 0.960
-        exp_b = insert_experiment(session, challenger_b)
+        _ = insert_experiment(session, challenger_b)
 
         session.commit()
 
@@ -922,7 +947,9 @@ def test_promotion_reads_latest_champion(temp_db, sample_run_record):
 
     engine = create_engine_with_pragmas(temp_db)
     from sqlmodel import SQLModel
+
     from app.db import models  # noqa: F401
+
     SQLModel.metadata.create_all(engine)
 
     # Setup
@@ -979,7 +1006,9 @@ def test_weaker_second_challenger_rejected(temp_db, sample_run_record):
 
     engine = create_engine_with_pragmas(temp_db)
     from sqlmodel import SQLModel
+
     from app.db import models  # noqa: F401
+
     SQLModel.metadata.create_all(engine)
 
     # Setup
@@ -1035,7 +1064,9 @@ def test_no_challenger_receives_multiple_decisions(temp_db, sample_run_record):
 
     engine = create_engine_with_pragmas(temp_db)
     from sqlmodel import SQLModel
+
     from app.db import models  # noqa: F401
+
     SQLModel.metadata.create_all(engine)
 
     # Setup
@@ -1095,6 +1126,7 @@ def test_no_challenger_receives_multiple_decisions(temp_db, sample_run_record):
 # =============================================================================
 # Transaction Tests
 # =============================================================================
+
 
 def test_failed_transaction_rolls_back(session, sample_run_record):
     """Failed transactions roll back correctly."""
@@ -1178,7 +1210,8 @@ def test_lock_retries_bounded(session):
     """Lock retries are bounded (test with immediate failure)."""
     # This is harder to test without mocking, but we verify the logic exists
     # by checking the constant
-    from app.db.session import MAX_RETRIES, BASE_RETRY_DELAY
+    from app.db.session import BASE_RETRY_DELAY, MAX_RETRIES
+
     assert MAX_RETRIES == 5
     assert BASE_RETRY_DELAY == 0.05
 
@@ -1187,7 +1220,9 @@ def test_foreign_keys_active_on_new_connections(temp_db):
     """Foreign keys are active on new connections."""
     engine = create_engine_with_pragmas(temp_db)
     from sqlmodel import SQLModel
+
     from app.db import models  # noqa: F401
+
     SQLModel.metadata.create_all(engine)
 
     # First connection: insert mission
@@ -1200,7 +1235,7 @@ def test_foreign_keys_active_on_new_connections(temp_db):
     with Session(engine) as session:
         hypothesis = Hypothesis(id="h1", mission_id="nonexistent", proposal_json="{}")
         session.add(hypothesis)
-        with pytest.raises(Exception):
+        with pytest.raises(IntegrityError):
             session.commit()
 
 
@@ -1271,6 +1306,7 @@ def test_no_partial_decision_state_committed(session, sample_run_record):
 # =============================================================================
 # Gate Evaluation Tests
 # =============================================================================
+
 
 def test_evaluate_gate_null_champion():
     """Gate evaluation against null champion uses floor metrics."""
@@ -1415,7 +1451,10 @@ def test_evaluate_gate_auc_tolerance():
         seed=42,
         git_commit="commit",
         dataset_fingerprint="fp",
-        metrics={"f1": 0.90, "roc_auc": 0.90 - 1e-10},  # Slightly less, within tolerance
+        metrics={
+            "f1": 0.90,
+            "roc_auc": 0.90 - 1e-10,
+        },  # Slightly less, within tolerance
         artifact_path="artifacts/test/",
         verdict=Verdict.PENDING,
         replayable=True,
@@ -1444,6 +1483,7 @@ def test_evaluate_gate_auc_tolerance():
 # =============================================================================
 # Paper, GraphEdge, Message Tests
 # =============================================================================
+
 
 def test_paper_model(session):
     """Paper model works correctly."""
@@ -1507,6 +1547,7 @@ def test_message_model(session):
 # Existing Test Suite Compatibility
 # =============================================================================
 
+
 def test_existing_ml_tests_still_pass():
     """Verify existing ML sandbox tests still pass."""
     import subprocess
@@ -1514,14 +1555,24 @@ def test_existing_ml_tests_still_pass():
 
     # Just run a quick sanity check on a subset of ML tests
     result = subprocess.run(
-        [sys.executable, "-m", "pytest", "test_config.py", "test_preprocess.py", "-q", "--tb=short"],
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "test_config.py",
+            "test_preprocess.py",
+            "-q",
+            "--tb=short",
+        ],
         cwd=Path(__file__).parent,
         capture_output=True,
         text=True,
         timeout=60,
     )
     # Should pass
-    assert result.returncode == 0, f"Existing tests failed:\n{result.stdout}\n{result.stderr}"
+    assert (
+        result.returncode == 0
+    ), f"Existing tests failed:\n{result.stdout}\n{result.stderr}"
 
 
 if __name__ == "__main__":

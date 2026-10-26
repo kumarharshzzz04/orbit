@@ -3,7 +3,9 @@ testpaths = ["tests"]
 addopts = "-ra"
 markers = [
   "cnn: tests that require PyTorch",
+  "asyncio: async tests",
 ]
+asyncio_mode = "auto"
 
 [tool.ruff]
 line-length = 88

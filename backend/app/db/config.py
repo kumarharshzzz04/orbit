@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
+from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Generator
 
-from sqlmodel import SQLModel, Session, create_engine
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
-
+from sqlmodel import Session, SQLModel, create_engine
 
 # Database file location
 DEFAULT_DB_PATH = Path(__file__).resolve().parents[3] / "data" / "orbit.db"
@@ -51,8 +50,16 @@ _engine: Engine | None = None
 def get_engine(db_path: Path | None = None) -> Engine:
     """Get or create the global engine instance."""
     global _engine
+    # Check environment variable for test database path
+    import os
+
     if _engine is None:
-        _engine = create_engine_with_pragmas(db_path)
+        effective_path = db_path
+        if effective_path is None:
+            env_path = os.environ.get("ORBIT_DB_PATH")
+            if env_path:
+                effective_path = Path(env_path)
+        _engine = create_engine_with_pragmas(effective_path)
     return _engine
 
 

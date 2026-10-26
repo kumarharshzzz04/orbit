@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import time
+from collections.abc import Callable, Generator
 from contextlib import contextmanager
-from typing import Callable, Generator, TypeVar
+from typing import TypeVar
 
-from sqlmodel import Session, select, text
 from sqlalchemy import exc as sa_exc
+from sqlmodel import Session, select, text
 
-from .config import get_engine, session_scope
+from .models import ExecutionStatus, Experiment, Verdict
 
 T = TypeVar("T")
 
@@ -80,17 +81,17 @@ def run_in_transaction(
             raise
         finally:
             session.close()
-    raise RuntimeError(f"Transaction failed after {max_retries} retries") from last_error
+    raise RuntimeError(
+        f"Transaction failed after {max_retries} retries"
+    ) from last_error
 
 
-def get_current_champion(session: Session) -> "Experiment | None":
+def get_current_champion(session: Session) -> Experiment | None:
     """
     Get the current champion experiment.
 
     Champion = highest-F1 KEEP verdict with COMPLETED execution status.
     """
-    from .models import Experiment, Verdict, ExecutionStatus
-
     return session.exec(
         select(Experiment)
         .where(Experiment.verdict == Verdict.KEEP)
