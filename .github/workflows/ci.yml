@@ -20,13 +20,16 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install ruff black
-      - run: ruff check backend
-      - run: black --check backend
+      - run: ruff check .
+        working-directory: backend
+      - run: black --check .
+        working-directory: backend
 
   lint-frontend:
     name: lint (frontend)
     runs-on: ubuntu-latest
     continue-on-error: true   # tighten after CP-1
+    if: hashFiles('frontend/package.json') != ''
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
