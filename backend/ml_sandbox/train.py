@@ -210,7 +210,7 @@ def run(
         val_split = data.select("val")
         test_split = data.select("test")
 
-        n_inputs = len(data.feature_names) if cfg.model == "baseline" else data.n_bins
+        n_inputs = data.n_bins if cfg.model == "cnn" else len(data.feature_names)
         progress.emit(
             "train",
             status="start",
@@ -220,6 +220,8 @@ def run(
         )
         if cfg.model == "baseline":
             from .models.baseline import fit_predict
+        elif cfg.model == "hist":
+            from .models.hist import fit_predict
         else:
             from .models.cnn import fit_predict
 

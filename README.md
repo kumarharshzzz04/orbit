@@ -24,10 +24,11 @@ data. None of it is a slide claim.
 | **Scale checked on the whole catalog** | 9,564 targets / 8,214 host stars, host-grouped 5-fold, primary truth: **F1 0.883 ± 0.017, AUC 0.971 ± 0.005** | [runs/evidence/catalog_full_cv.json](runs/evidence/catalog_full_cv.json), `python -m ml_sandbox.catalog_cv` |
 | **Honest generalization number** | Folded-pixel champion on unseen hosts: **F1 0.801 ± 0.036, AUC 0.934 ± 0.030**. The 0.933 frozen-split figure is only ever quoted beside it | [docs/ML.md](docs/ML.md) §Second estimate |
 | **Errors diagnosed, not hidden** | 48% of out-of-fold false positives (12/25) carry the archive's centroid-blend flag; both frozen-split FPs are confirmed blends at 8.52″ and 3.69″ | [docs/ML.md](docs/ML.md) §pixel-level diagnostic |
-| **A gate that rejects** | **Four of four** challengers **REJECT** on the 893-target split v2 - vetting features 0.8485, class-weight 0.8667, calibration 0.8667, CNN 0.5918 against a 0.9032 champion - each with a written diagnosis; `promote()` is the only thing allowed to change the champion | [docs/ML.md](docs/ML.md) §v2 re-score, [runs/](runs) |
+| **A gate that rejects** | **Five of five** challengers **REJECT** on the 893-target split v2 - vetting features 0.8485, class-weight 0.8667, calibration 0.8667, CNN 0.5918, HistGBM 0.8571 against a 0.9032 champion - each with a written diagnosis; `promote()` is the only thing allowed to change the champion | [docs/ML.md](docs/ML.md) §v2 re-score, [runs/](runs) |
 | **Pre-registered, then falsified** | The Platt-calibration challenger (H-003) was written **before** split v2 existed, was never scored on v1 test rows, and came back **REJECT** with the number attached | [runs/challenger_calibrated_live.json](runs/challenger_calibrated_live.json), [docs/ML.md](docs/ML.md) §v2 pre-registration |
 | **More data bought precision, not F1** | 32 → 98 primary test rows; champion's 95% F1 interval tightened 0.185 → 0.156 wide, F1 moved 0.933 → 0.903. Stated as the prediction it was, then scored | [docs/ML.md](docs/ML.md) §v2 re-score |
-| **Reproducible by construction** | Every run records config hash, seed, git commit, dataset and split fingerprints; **114 tests** cover leakage, determinism, the CLI contract, replay, the gate and atomic promotion | `pytest -q` |
+| **Model search, done without touching test** | 40 configs across 4 model families, host-grouped CV on 759 train+val rows only; the one candidate that cleared the paired-interval rule (HistGBM, +0.0215) was trained once and **REJECTED** at 0.8571. The search space is not what limits this model | `python -m ml_sandbox.model_search`, [runs/evidence/model_search_v2.json](runs/evidence/model_search_v2.json) |
+| **Reproducible by construction** | Every run records config hash, seed, git commit, dataset and split fingerprints; **119 tests** cover leakage, determinism, the CLI contract, replay, the gate and atomic promotion | `pytest -q` |
 | **NVIDIA GPU path, measured** | CUDA CNN: 11.97 s → 2.36 s training (**5.1×**), identical F1; CPU stays default so existing hashes replay | [docs/ML.md](docs/ML.md) §NVIDIA GPU path |
 
 ### The scale question, answered with a number
@@ -37,7 +38,8 @@ Kepler Objects of Interest table — no downloads, catalog features only:
 
 | Training data | 5-fold F1 | 5-fold AUC | Primary rows |
 |---|---|---|---|
-| 297 live light curves | 0.801 ± 0.036 | 0.934 ± 0.030 | 234 out-of-fold |
+| 297 live light curves (v1 snapshot) | 0.801 ± 0.036 | 0.934 ± 0.030 | 234 out-of-fold |
+| 759 live rows, split v2 train+val | 0.799 ± 0.030 | 0.948 ± 0.011 | 5-fold, threshold per fold |
 | **full KOI catalog (9,564)** | **0.883 ± 0.017** | **0.971 ± 0.005** | 7,587 |
 
 32× more data shrinks the confidence interval by 3×. That precision is the result — not a
@@ -54,7 +56,7 @@ build — nothing in this README pretends they exist yet.
 
 | Module | Owner | State |
 |---|---|---|
-| ML sandbox + eval harness (`backend/ml_sandbox/`) | C | **Evidence complete** — 893 live targets on frozen split v2 (900 requested, 7 unreadable products skipped), 1,500-target stub cache, 114 tests, full-catalog scale check, four REJECT rows |
+| ML sandbox + eval harness (`backend/ml_sandbox/`) | C | **Evidence complete** — 893 live targets on frozen split v2 (900 requested, 7 unreadable products skipped), 1,500-target stub cache, 119 tests, full-catalog scale check, five REJECT rows |
 | SQLite schema + experiment registry (`backend/app/db/`, `services/registry.py`) | B | **Landed, 43 tests passing** — 8 tables, `promote()`/`bootstrap_champion()`, atomic `BEGIN IMMEDIATE` promotion, durable REJECT on bootstrap. FastAPI routers, `main.py` and the WS broadcast are **not** built yet |
 | Agent orchestrator + six-agent loop (`backend/app/`) | A | Not started — start at [docs/AGENTS_SYSTEM.md](docs/AGENTS_SYSTEM.md) |
 | React mission control (`frontend/`) | D | Not started — start at [docs/FRONTEND.md](docs/FRONTEND.md) |
@@ -153,7 +155,7 @@ python -m ml_sandbox.stability --predictions ../artifacts/baseline_live/predicti
 # 5. full-catalog scale check (needs a cached KOI table; writes runs/evidence/)
 python -m ml_sandbox.catalog_cv
 
-# 6. tests (leakage, determinism, CLI contract, replay, gate, stability) - 114 tests
+# 6. tests (leakage, determinism, CLI contract, replay, gate, stability) - 119 tests
 pytest -q
 ```
 
@@ -198,7 +200,7 @@ exercise, not a method one.
 
 ```bash
 cd backend
-pytest -q                                    # 114 tests, no network
+pytest -q                                    # 119 tests, no network
 python -m ml_sandbox.catalog_cv              # 9,564-row scale check -> runs/evidence/
 python -m ml_sandbox.train --config ../runs/baseline_live.json --out ../artifacts/live-baseline
 ```

@@ -22,13 +22,15 @@ even mid-day, even for one hour. Four questions, no essays. Newest at top.
    - Gate logic: F1 improvement + AUC safety margin; replayability gate; null champion floor (F1>0, AUC>=0.5)
    - `bootstrap_champion()` durably commits REJECT decisions before raising (fresh-session verified)
    - 43 database tests covering: schema creation, FK enforcement, unique constraints, attempt lifecycle, registry promotion, bootstrap, concurrency (BEGIN IMMEDIATE serialization), transaction rollback
-   - Full suite: 113 passed, 1 skipped (`tests/test_cnn.py`, torch absent in that venv)
+   - Full suite: 118 passed, 1 skipped (`tests/test_cnn.py`, torch absent in that venv)
 
    ML frozen on real data, split v2:
    - 893 live Kepler targets cached (900 requested, 7 unreadable MAST products skipped, reasons in `cache_build.json`)
    - Split v2 frozen at 625/134/134; dataset `aa1bb5ca19a2390cc2f6cf1a6014d100f9b15dfe`, split `7449f8b87a9319d83537246ed1bfbf07a1e2e13b`
    - Champion F1 0.9032 (0.8148-0.9706) / AUC 0.9740 on 98 primary test rows
-   - All four challengers REJECT: class-weight 0.8667, pre-registered H-003 Platt calibration 0.8667, vetting features 0.8485, CNN 0.5918
+   - All five challengers REJECT: class-weight 0.8667, pre-registered H-003 Platt calibration 0.8667, H-004 HistGBM 0.8571, vetting features 0.8485, CNN 0.5918
+   - H-004 came from a committed 41-config search over 4 model families on train+val only, and still lost on the frozen draw
+   - Registry seeding handoff: `python backend/scripts/seed_registry.py --db data/orbit.db` bootstraps the champion and gates every challenger
    - H-003 was written before split v2 existed; it is falsified, not refitted
    - Generalization estimate remains F1 0.80 +/- 0.04 / AUC 0.934 from host-grouped 5-fold CV over the 297-target v1 snapshot (NOT yet re-run on 893)
    - Split v1 and its artifacts are untouched; v2 was additive, created only because the cache grew

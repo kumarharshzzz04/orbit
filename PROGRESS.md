@@ -16,6 +16,29 @@ NOTE:    decisions, surprises, gotchas the next person needs
 
 ---
 
+## 2026-10-26 - Member C (ML: model search + handoff)
+DONE: tried to beat the champion honestly, and failed in a useful way. New
+      `ml_sandbox.model_search` runs a declared 40-config grid across GradientBoosting,
+      HistGradientBoosting, RandomForest and ExtraTrees on the v2 train+val pool only
+      (759 rows; the 134 frozen test rows are excluded in code). Champion 5-fold F1
+      0.7994 +/- 0.0299 / AUC 0.9484 - which agrees with the 297-target estimate of
+      0.801, so the generalization number is stable across caches. One candidate cleared
+      the paired-interval rule: HistGBM +0.0215 [+0.0005, +0.0424]. Added it as model
+      family `hist` (config validation, training dispatch, tests) and as H-004
+      (`runs/challenger_hist_live.json`), trained once on the frozen split: F1 0.8571 /
+      AUC 0.9716 -> REJECT. The thin CV lower bound did not transfer to a 98-row draw.
+      Suite 118 passed + 1 skipped. Also wrote `backend/scripts/seed_registry.py`: it
+      creates the seed mission + hypothesis rows the registry FK requires, bootstraps
+      the champion, and gates all five challengers - verified on a temp DB, all REJECT.
+NEXT:  B: main.py + routers; A: CP-1 seam; D: UI. C: ML track closed.
+BLOCKED: none
+NOTE: registry `insert_experiment()` fails with a FOREIGN KEY error when a run_record
+      carries `hypothesis_id` but no Hypothesis row exists. Not a bug in the registry -
+      the orchestrator is supposed to create mission + hypothesis first. The seed script
+      now does that for the ML runs. Anyone inserting raw run_records hits it immediately.
+
+---
+
 ## 2026-10-26 - Member C (ML + backend review)
 DONE: closed the ML track on split v2. The 893-target live cache completed (900 requested,
       7 unreadable MAST products skipped with reasons), the v2 watcher froze split v2 at

@@ -5,7 +5,7 @@ import json
 import pytest
 
 from ml_sandbox import paths
-from ml_sandbox.config import ConfigError, RunConfig, load_config
+from ml_sandbox.config import MODELS, ConfigError, RunConfig, load_config
 
 
 def test_defaults_are_filled_in() -> None:
@@ -112,6 +112,6 @@ def test_all_shipped_run_configs_validate() -> None:
         raw = json.loads(path.read_text(encoding="utf-8"))
         cfg = RunConfig.from_dict(raw, source=str(path))
         assert cfg.name
-        assert cfg.model in {"baseline", "cnn"}
+        assert cfg.model in MODELS
         assert cfg.model_params
         assert cfg.data["stub_targets"] == 1500

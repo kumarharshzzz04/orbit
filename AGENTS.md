@@ -17,12 +17,14 @@ SYSTEM STATE:   [ ] not started   [x] scaffolding   [ ] walking skeleton (CP-1)
 WORKING:        ML frozen on real data, split v2: live cache 893 targets (900 requested,
                 7 unreadable MAST products skipped with reasons); split v2 frozen at
                 625/134/134, dataset aa1bb5ca, split 7449f8b8; champion F1 0.9032
-                (0.8148-0.9706) / AUC 0.9740 on 98 primary test rows; all FOUR challengers
+                (0.8148-0.9706) / AUC 0.9740 on 98 primary test rows; all FIVE challengers
                 REJECT (class-weight 0.8667, pre-registered H-003 Platt calibration 0.8667,
-                vetting features 0.8485, CNN 0.5918); generalization estimate stays
-                F1 0.80 +/- 0.04 / AUC 0.934 from host-grouped 5-fold CV; full-catalog
-                scale check committed (9,564 KOIs, F1 0.883 +/- 0.017 / AUC 0.971 +/- 0.005);
-                CUDA CNN path measured (5.1x); 113 passed + 1 skipped test (torch absent)
+                H-004 HistGBM 0.8571, vetting features 0.8485, CNN 0.5918); model search over
+                41 configs / 4 families is committed and its one CV-blessed winner still lost
+                on the frozen split; generalization estimate 5-fold CV on 759 v2 train+val
+                rows F1 0.799 +/- 0.030 / AUC 0.948 (0.801 on the 297 v1 snapshot agrees);
+                full-catalog scale check committed (9,564 KOIs, F1 0.883 +/- 0.017);
+                CUDA CNN path measured (5.1x); 118 passed + 1 skipped test (torch absent)
 
                 B2 landed: SQLite schema (8 tables), registry with
                 promote()/bootstrap_champion(), gate evaluation, atomic BEGIN IMMEDIATE

@@ -19,7 +19,7 @@ from typing import Any
 from . import features as feature_sets
 from . import paths
 
-MODELS = ("baseline", "cnn")
+MODELS = ("baseline", "hist", "cnn")
 DATA_MODES = ("stub", "live")
 THRESHOLD_SELECTIONS = ("val_f1", "fixed")
 
@@ -54,6 +54,14 @@ _MODEL_KEYS = {
         "max_features",
         "class_weight",
     },
+    "hist": {
+        "max_iter",
+        "learning_rate",
+        "max_leaf_nodes",
+        "min_samples_leaf",
+        "l2_regularization",
+        "class_weight",
+    },
     "cnn": {
         "channels",
         "kernel_size",
@@ -71,6 +79,7 @@ _TRAINING_COMMON = {
 CALIBRATIONS = ("none", "platt")
 _TRAINING_KEYS = {
     "baseline": set(_TRAINING_COMMON),
+    "hist": set(_TRAINING_COMMON),
     "cnn": _TRAINING_COMMON
     | {
         "max_epochs",
@@ -93,6 +102,14 @@ _BASELINE_DEFAULTS: dict[str, Any] = {
     "max_features": None,
     "class_weight": None,
 }
+_HIST_DEFAULTS: dict[str, Any] = {
+    "max_iter": 400,
+    "learning_rate": 0.05,
+    "max_leaf_nodes": 31,
+    "min_samples_leaf": 10,
+    "l2_regularization": 1.0,
+    "class_weight": None,
+}
 _CNN_DEFAULTS: dict[str, Any] = {
     "channels": [32, 64, 96],
     "kernel_size": 7,
@@ -102,6 +119,11 @@ _CNN_DEFAULTS: dict[str, Any] = {
 }
 _TRAINING_DEFAULTS: dict[str, dict[str, Any]] = {
     "baseline": {
+        "threshold_selection": "val_f1",
+        "threshold": 0.5,
+        "max_train_seconds": 600.0,
+    },
+    "hist": {
         "threshold_selection": "val_f1",
         "threshold": 0.5,
         "max_train_seconds": 600.0,
@@ -262,7 +284,10 @@ def _validate_features(raw: dict[str, Any]) -> dict[str, Any]:
 
 
 def _validate_model_params(model: str, raw: dict[str, Any]) -> dict[str, Any]:
-    defaults = _BASELINE_DEFAULTS if model == "baseline" else _CNN_DEFAULTS
+    defaults = {
+        "baseline": _BASELINE_DEFAULTS,
+        "hist": _HIST_DEFAULTS,
+    }.get(model, _CNN_DEFAULTS)
     params = copy.deepcopy(defaults)
     params.update(raw)
     _unknown_keys(params, _MODEL_KEYS[model], "model_params")
@@ -311,6 +336,33 @@ def _validate_model_params(model: str, raw: dict[str, Any]) -> dict[str, Any]:
                 minimum_inclusive=False,
                 maximum_inclusive=False,
             )
+        _class_weight(params["class_weight"], "model_params.class_weight")
+        return params
+
+    if model == "hist":
+        params["max_iter"] = _integer(
+            params["max_iter"], "model_params.max_iter", minimum=1
+        )
+        if params["max_iter"] > 5000:
+            _fail("model_params.max_iter must be <= 5000")
+        params["max_leaf_nodes"] = _integer(
+            params["max_leaf_nodes"], "model_params.max_leaf_nodes", minimum=2
+        )
+        if params["max_leaf_nodes"] > 512:
+            _fail("model_params.max_leaf_nodes must be <= 512")
+        params["min_samples_leaf"] = _integer(
+            params["min_samples_leaf"], "model_params.min_samples_leaf", minimum=1
+        )
+        params["learning_rate"] = _number(
+            params["learning_rate"],
+            "model_params.learning_rate",
+            minimum=0.0,
+            maximum=1.0,
+            minimum_inclusive=False,
+        )
+        params["l2_regularization"] = _number(
+            params["l2_regularization"], "model_params.l2_regularization", minimum=0.0
+        )
         _class_weight(params["class_weight"], "model_params.class_weight")
         return params
 

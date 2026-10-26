@@ -19,6 +19,15 @@ BASELINE_PARAMS: dict[str, Any] = {
     "class_weight": None,
 }
 
+HIST_PARAMS: dict[str, Any] = {
+    "max_iter": 80,
+    "learning_rate": 0.05,
+    "max_leaf_nodes": 15,
+    "min_samples_leaf": 10,
+    "l2_regularization": 1.0,
+    "class_weight": None,
+}
+
 CNN_PARAMS: dict[str, Any] = {
     "channels": [16, 32, 48],
     "kernel_size": 5,
@@ -78,10 +87,13 @@ def make_config(
         },
         "features": {"set": "catalog_v1"},
         "model_params": copy.deepcopy(
-            BASELINE_PARAMS if model == "baseline" else CNN_PARAMS
+            {
+                "baseline": BASELINE_PARAMS,
+                "hist": HIST_PARAMS,
+            }.get(model, CNN_PARAMS)
         ),
         "training": copy.deepcopy(
-            BASELINE_TRAINING if model == "baseline" else CNN_TRAINING
+            BASELINE_TRAINING if model in {"baseline", "hist"} else CNN_TRAINING
         ),
     }
     deep_update(raw, overrides)

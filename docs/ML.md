@@ -14,7 +14,7 @@ learning on Kepler photometry - we aim for a credible demo model, not SOTA.
 | CP-1 data | **Stub**: 1,500 deterministic targets cached. **Live v2**: 893 real Kepler targets cached from a 900-target request (7 skipped, reasons in `cache_build.json`), 8,805 s at 3 workers, dataset `aa1bb5ca...`. **Live v1** (297 targets) is preserved as the historical split. |
 | CP-1 baseline | **Working**: stub F1 0.837, AUC 0.899 (n=224). **Live v2** F1 0.9032 (0.8148-0.9706), AUC 0.9740 on 98 primary test rows. **Live v1** F1 0.933 on 32 rows (historical). **0.80 ± 0.04 F1 / 0.934 AUC on host-grouped 5-fold CV** - the CV number is the generalization estimate. |
 | CP-2 CNN | **Working**: stub F1 0.821. **Live** F1 0.737, AUC 0.706 - underfits at 208 training rows. Honest negative result. |
-| CP-2 challenger | **Stub**: vetting-feature GBM F1 0.930, AUC 0.983 -> clears the gate. **Live v2**: all four challengers REJECT - class-weight 0.8667, pre-registered Platt calibration (H-003) 0.8667, vetting features 0.8485, CNN 0.5918, against a 0.9032 champion. H-003 was falsified, not refitted. |
+| CP-2 challenger | **Stub**: vetting-feature GBM F1 0.930, AUC 0.983 -> clears the gate. **Live v2**: all five challengers REJECT - class-weight 0.8667, pre-registered Platt calibration (H-003) 0.8667, vetting features 0.8485, CNN 0.5918, HistGBM (H-004) 0.8571, against a 0.9032 champion. H-003 and H-004 were pre-declared and then falsified, not refitted. |
 | CP-2 gate | ML emits PENDING, registry-shaped `run_record.json`; `services/registry.promote()` (Member B) is still the only decision point. |
 | FREEZE | Stub rebuild reproduces dataset fingerprint `ee1f7e04226f8e7b0ca68b3bd4dd8527877bac17` and split fingerprint `303b6081ebb5002449fae5de31b30f5adb78a732`. Live v1: dataset `3826e7f3542eca36941d0b73bef04769f443ac0d`, split `d8aa6b9975c56f1cdda7a1c5e1a88d3780175567`, same-config replay reproduced every metric to 16 decimals. Live v2: dataset `aa1bb5ca19a2390cc2f6cf1a6014d100f9b15dfe`, split `7449f8b87a9319d83537246ed1bfbf07a1e2e13b` (frozen once, after the cache completed). |
 
@@ -225,6 +225,7 @@ harness, same threshold rule for all five.
 | challenger | `challenger_calibrated_live_v2` (**H-003, pre-registered**) | 0.8667 (0.7619-0.9492) | 0.9740 (0.9432-0.9949) | 0.897 | 0.839 | REJECT: F1 -0.0365 |
 | challenger | `challenger_vetting_features_live_v2` | 0.8485 (0.7419-0.9303) | 0.9692 (0.9352-0.9930) | 0.800 | 0.903 | REJECT: F1 -0.0547 |
 | challenger | `cnn_live_v2` | 0.5918 (0.4772-0.6981) | 0.7029 (0.6045-0.8056) | 0.433 | 0.935 | REJECT: F1 -0.3114 |
+| challenger | `challenger_hist_live_v2` (**H-004**) | 0.8571 | 0.9716 | 0.844 | 0.871 | REJECT: F1 -0.0461 |
 
 Candidate-inclusive (all 134 test rows, CANDIDATE counted positive) for the
 champion: F1 0.7273 / AUC 0.8917 - reported separately, never as the headline.
@@ -247,6 +248,36 @@ and landed on the same confusion matrix as the uncalibrated balanced-weight mode
 (64 TN, 3 FP, 5 FN, 26 TP). The calibration removed threshold *scale* ambiguity,
 not the errors. F1 loss was not a threshold-transfer problem, so the hypothesis -
 written down before any v2 number existed - is falsified rather than refitted.
+
+### Model-family search (H-004): a CV gain that did not survive
+
+H-003 targeted the threshold. H-004 targets the estimator. `ml_sandbox.model_search`
+is committed so the search is reproducible rather than a notebook rumour:
+
+- Selection pool: **759 rows** (v2 train 625 + val 134). The 134 frozen test rows are
+excluded by construction, in code, not by convention.
+- 5 host-grouped folds, threshold chosen on a host-grouped inner-validation slice of each
+  fold, 40 candidate configs across `GradientBoosting`, `HistGradientBoosting`,
+  `RandomForest` and `ExtraTrees`.
+- Adopt only if the paired 95% interval of per-fold F1 difference against the champion
+  excludes 0.
+
+| Candidate | 5-fold F1 | Delta vs champion | 95% interval | Adopted by rule |
+|---|---|---|---|---|
+| champion (GBM, depth 6/leaf 4) | 0.7994 ± 0.0299 | - | - | reference |
+| HistGBM, 31 leaves, L2 1.0, balanced | 0.8209 ± 0.0465 | **+0.0215** | [+0.0005, +0.0424] | **yes, barely** |
+| RandomForest, depth 12/leaf 2 | 0.8227 ± 0.0495 | +0.0233 | [-0.0155, +0.0621] | no (interval spans 0) |
+| GBM, depth 8/leaf 8 | 0.8086 ± 0.0408 | +0.0091 | [-0.0208, +0.0391] | no |
+
+HistGBM cleared the pre-declared rule by 0.0005. It was then written as `runs/challenger_hist_live.json`
+(H-004), trained once on the frozen split and scored: **F1 0.8571 / AUC 0.9716**
+against the champion's 0.9032. REJECT, with the diagnosis that a razor-thin CV lower
+bound did not transfer to a 98-row draw.
+
+That is the fourth distinct idea the gate has killed, and the most useful kind of
+negative result: the search space is not what limits this model. The pooled CV number
+also lands where the 297-target run did (0.799 here, 0.801 there), which is the strongest
+evidence yet that **0.80 F1 on unseen hosts is the model, and 0.90 is the draw.**
 
 Read the champion number correctly: 0.9032 on 98 rows is **not** an upgrade of the
 0.80 cross-validated estimate, and the two must never be swapped in a slide. The

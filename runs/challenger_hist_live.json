@@ -1,0 +1,28 @@
+{
+  "name": "orbit-hist-live-v2",
+  "model": "hist",
+  "hypothesis_id": "H-004",
+  "seed": 42,
+  "data": {
+    "mode": "live",
+    "n_bins": 400,
+    "split_version": "v2",
+    "verify_content": true
+  },
+  "features": {
+    "set": "catalog_v1"
+  },
+  "model_params": {
+    "max_iter": 400,
+    "learning_rate": 0.05,
+    "max_leaf_nodes": 31,
+    "min_samples_leaf": 10,
+    "l2_regularization": 1.0,
+    "class_weight": "balanced"
+  },
+  "training": {
+    "threshold_selection": "val_f1",
+    "threshold": 0.5
+  },
+  "notes": "H-004, pre-declared before scoring. ONE change vs the v2 champion: estimator family GradientBoosting -> HistGradientBoosting with L2. Chosen only by host-grouped 5-fold CV on the train+val pool (759 rows), paired 95% interval on per-fold F1 against the champion excluded zero (+0.0215, [+0.0005, +0.0424]); the frozen test split was not read during selection. Same 12 catalog features, same seed, same validation-F1 threshold rule. Expect a marginal gain at best - the residual error is pixel-level blends."
+}
