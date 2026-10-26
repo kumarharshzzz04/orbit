@@ -17,27 +17,26 @@ even mid-day, even for one hour. Four questions, no essays. Newest at top.
    ```
 
    Backend complete:
-   - FastAPI app factory in `backend/app/main.py` (skeleton)
    - SQLite schema: 8 tables (missions, hypotheses, experiments, experiment_decisions, experiment_attempts, papers, graph_edges, messages)
    - Registry service: `insert_experiment()`, `promote()`, `bootstrap_champion()`, `_evaluate_gate()`
    - Gate logic: F1 improvement + AUC safety margin; replayability gate; null champion floor (F1>0, AUC>=0.5)
    - `bootstrap_champion()` durably commits REJECT decisions before raising (fresh-session verified)
    - 43 database tests covering: schema creation, FK enforcement, unique constraints, attempt lifecycle, registry promotion, bootstrap, concurrency (BEGIN IMMEDIATE serialization), transaction rollback
-   - All 73 ML sandbox tests still pass
-   - Total: 116 tests passing
+   - Full suite: 113 passed, 1 skipped (`tests/test_cnn.py`, torch absent in that venv)
 
-   ML frozen on real data:
-   - 297 live Kepler targets cached (300 requested, 3 skipped)
-   - Live split v1 (208/45/44, primary test 32 with 14 positives): champion F1 0.9333/AUC 0.9841
-   - Vetting challenger F1 0.9333/AUC 0.9960 -> REJECT; class-weight 0.9286 and CNN 0.7368 -> REJECT
-   - Clean-tree replay reproduced every metric
-   - 1,500-target stub cache; dataset fingerprint `ee1f7e04226f8e7b0ca68b3bd4dd8527877bac17`
-   - Baseline F1 0.8372/AUC 0.8988; vetting challenger F1 0.9305/AUC 0.9833
-   - 900-target live cache downloading (66%, 597/900)
+   ML frozen on real data, split v2:
+   - 893 live Kepler targets cached (900 requested, 7 unreadable MAST products skipped, reasons in `cache_build.json`)
+   - Split v2 frozen at 625/134/134; dataset `aa1bb5ca19a2390cc2f6cf1a6014d100f9b15dfe`, split `7449f8b87a9319d83537246ed1bfbf07a1e2e13b`
+   - Champion F1 0.9032 (0.8148-0.9706) / AUC 0.9740 on 98 primary test rows
+   - All four challengers REJECT: class-weight 0.8667, pre-registered H-003 Platt calibration 0.8667, vetting features 0.8485, CNN 0.5918
+   - H-003 was written before split v2 existed; it is falsified, not refitted
+   - Generalization estimate remains F1 0.80 +/- 0.04 / AUC 0.934 from host-grouped 5-fold CV over the 297-target v1 snapshot (NOT yet re-run on 893)
+   - Split v1 and its artifacts are untouched; v2 was additive, created only because the cache grew
+   - 1,500-target stub cache; dataset fingerprint `ee1f7e04226f8e7b0ca68b3bd4dd8527877bac17`; stub baseline F1 0.8372/AUC 0.8988
 
 2. WHAT IS BROKEN:
    - `agent_orchestrator` loop (A), `frontend/` Vite UI (D), CI workflow (B)
-   - FastAPI routers not yet wired to registry (endpoints stubbed)
+   - No FastAPI app object and no routers exist at all - only `app/db/` and `app/services/registry.py`
    - WebSocket endpoint `/ws/{mission_id}` not implemented
    - `ci.yml` still at repo root (needs move to .github/workflows/)
    - Live gate has no KEEP: the champion already sits at the 14-positive ceiling, so every live challenger ties or loses
@@ -47,7 +46,7 @@ even mid-day, even for one hour. Four questions, no essays. Newest at top.
    (1) B: wire FastAPI routers to registry; implement WS broadcast; move CI to .github/workflows/
    (2) A: build orchestrator loop + agent prompts + NIM/Nemotron LLM connector (NVIDIA event)
    (3) D: build Vite UI against `docs/fixtures/ws_events.jsonl`, then switch to B's socket
-   (4) C: download 300-target live cache (~75-90 min at `--workers 3`), score baseline and vetting challenger; hand B the four live `run_record.json` rows
+   (4) C: done - hand B the five v2 `run_record.json` rows in `artifacts/*_v2/` for registry seeding; optionally re-run host-grouped CV on 893 to replace the 297-target 0.80 estimate
 
 4. WATCH OUT:       Frozen split v1 is immutable. Never rebuild the cache with a
                     different target set under the same split version; bump
