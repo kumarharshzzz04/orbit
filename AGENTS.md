@@ -11,33 +11,34 @@ information here is worse than no information.
 ## 1. Current State (update on EVERY pull request - one writer: Member A)
 
 ```
-LAST UPDATED:   2026-10-25 19:45  (by B; owner A to confirm)
-SYSTEM STATE:   [ ] not started   [x] scaffolding   [x] walking skeleton (CP-1)
+LAST UPDATED:   2026-10-26  (by C; owner A to confirm)
+SYSTEM STATE:   [ ] not started   [x] scaffolding   [ ] walking skeleton (CP-1)
                 [x] ML frozen (live scored)      [ ] feature complete (CP-2)
-WORKING:        ML frozen on real data: 297 live Kepler targets (300 requested, 3 skipped)
-                + 1,500 stub; 73 ML tests; ruff/black clean; champion F1 0.933/AUC 0.984 on
-                the 32-row frozen split, generalization estimate F1 0.80 +/- 0.04 / AUC
-                0.934 from host-grouped 5-fold CV; vetting 0.933/0.996, class-weight
-                0.929, CNN 0.737 -> all REJECT; optional CUDA CNN path (5.1x training,
-                11.97s -> 2.36s); error budget: 12/25 out-of-fold FPs are centroid
-                blends; bootstrap CI CLI; full-catalog scale check reproducible
-                (9,564 KOIs, 5-fold F1 0.883 +/- 0.017 / AUC 0.971 +/- 0.005) committed
-                to runs/evidence/; README now links every claim to its artifact;
-                900-target cache downloading (66%, 597/900), auto v2 + calibration
-                re-score armed
+WORKING:        ML frozen on real data, split v2: live cache 893 targets (900 requested,
+                7 unreadable MAST products skipped with reasons); split v2 frozen at
+                625/134/134, dataset aa1bb5ca, split 7449f8b8; champion F1 0.9032
+                (0.8148-0.9706) / AUC 0.9740 on 98 primary test rows; all FOUR challengers
+                REJECT (class-weight 0.8667, pre-registered H-003 Platt calibration 0.8667,
+                vetting features 0.8485, CNN 0.5918); generalization estimate stays
+                F1 0.80 +/- 0.04 / AUC 0.934 from host-grouped 5-fold CV; full-catalog
+                scale check committed (9,564 KOIs, F1 0.883 +/- 0.017 / AUC 0.971 +/- 0.005);
+                CUDA CNN path measured (5.1x); 113 passed + 1 skipped test (torch absent)
 
-                B2 complete: FastAPI app, SQLite schema (8 tables), registry with
-                promote()/bootstrap_champion(), gate evaluation, 43 registry tests +
-                73 ML tests = 116 total passing; foreign key enforcement verified;
-                durable REJECT decisions in bootstrap; WS event schema contracts
-BROKEN:         agent loop (A), frontend (D), active CI (not built yet)
-NEXT UP:        B: wire FastAPI routers to registry; implement WS broadcast; move CI to .github/workflows/
+                B2 landed: SQLite schema (8 tables), registry with
+                promote()/bootstrap_champion(), gate evaluation, atomic BEGIN IMMEDIATE
+                promotion, durable REJECT on bootstrap, 43 registry tests. NOTE: there is
+                NO FastAPI app object, no routers and no WS broadcast yet - only db/ and
+                services/. B's AGENTS entry claiming "FastAPI app" and CP-1 was wrong,
+                and the push is not lint-clean (79 ruff errors, 6 files need black).
+BROKEN:         agent loop (A), FastAPI routes/main.py + WS (B), frontend (D), active CI
+NEXT UP:        B: main.py + routers -> registry, WS broadcast, move ci.yml to .github/workflows/
                 A: orchestrator loop + agent prompts + NIM/Nemotron LLM connector (NVIDIA event)
                 D: Vite UI against docs/fixtures/ws_events.jsonl
-                C: 300-target live cache download; hand B the live run_record.json rows
-DEMO RISK:      live gate has no KEEP and CV says 0.80, so never quote 0.933 alone;
-                more data and GPU buy precision/speed, not F1 (ceiling is pixel-level
-                blends); 297 of 1,500 targets; ci.yml is still at repo root
+                C: done - hand B the v2 run_record.json rows for registry seeding
+DEMO RISK:      CP-1 is NOT met (no agent reply, no panel); live gate has no KEEP and CV
+                says 0.80, so never quote 0.9032 or 0.933 alone; more data and GPU buy
+                precision/speed, not F1 (ceiling is pixel-level blends); ci.yml is still
+                at repo root so nothing is actually enforced in CI
 ```
 
 ## 2. Owners (one owner per module, at any moment)

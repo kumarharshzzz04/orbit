@@ -16,6 +16,37 @@ NOTE:    decisions, surprises, gotchas the next person needs
 
 ---
 
+## 2026-10-26 - Member C (ML + backend review)
+DONE: closed the ML track on split v2. The 893-target live cache completed (900 requested,
+      7 unreadable MAST products skipped with reasons), the v2 watcher froze split v2 at
+      625/134/134 (dataset aa1bb5ca, split 7449f8b8) and scored five configs. Champion
+      `baseline_live_v2` F1 0.9032 (0.8148-0.9706) / AUC 0.9740 on 98 primary test rows.
+      All four challengers REJECT: class-weight 0.8667, pre-registered H-003 Platt
+      calibration 0.8667, vetting features 0.8485, CNN 0.5918. Both pre-declared success
+      criteria scored: promotion 0/1 (met: no), interval narrowing 1/1 (0.185 -> 0.156
+      wide). Reviewed and ran B's B2 push: 43 registry tests pass, full suite 113 passed +
+      1 skipped. Added the missing backend deps to requirements.txt (sqlmodel/SQLAlchemy/
+      fastapi) - without them the documented `pip install -r requirements.txt && pytest`
+      fails at collection. B's push is NOT lint-clean despite the claim: 79 ruff errors and
+      6 files black would reformat, all in B's module; I reported it rather than reformat
+      someone else's files, since CI is supposed to own that. Corrected AGENTS.md section 1: CP-1 un-ticked and the "FastAPI
+      app" claim removed (there is no main.py, no router, no WS broadcast). Wrote
+      backend/CHANGES_2026-10-26.txt and docs/AGENTS_CHANGES_2026-10-26.txt with the
+      review findings. README and docs/ML.md updated to the v2 numbers.
+NEXT:  B: main.py + routers -> registry, WS broadcast, move ci.yml to .github/workflows/.
+      A: CP-1 first (one mission -> one agent reply -> one panel), then the six-agent loop.
+      C: hand B the v2 run_record.json rows for registry seeding.
+BLOCKED: none
+NOTE: H-003 is the most useful artifact in the repo. It was written before split v2
+      existed, could not see v1 test rows, and came back REJECT with a number. Do not
+      describe it as a near miss - the calibration fixed threshold scale but changed no
+      decisions (identical 64/3/5/26 confusion matrix to the balanced-weight model).
+      Also: `promote()` returns Verdict.REJECT for operational errors (missing id, double
+      promote) with no row written - fine for the registry, misleading for any UI that
+      renders the returned verdict. See backend/CHANGES_2026-10-26.txt section 2b.
+
+---
+
 ## 2026-10-25 18:05 - Member C (ML + docs)
 DONE: made the scale claim reproducible instead of rhetorical. New `ml_sandbox.catalog_cv`
       trains the 12 catalog features on the whole KOI table (9,564 targets / 8,214 hosts)

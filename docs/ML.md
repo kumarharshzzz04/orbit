@@ -11,12 +11,12 @@ learning on Kepler photometry - we aim for a credible demo model, not SOTA.
 
 | Gate | State |
 |---|---|
-| CP-1 data | **Stub**: 1,500 deterministic targets cached. **Live**: 297 real Kepler targets cached from a 300-target request (3 skipped, resumable), 294 host stars (145 FALSE POSITIVE / 89 CONFIRMED / 63 CANDIDATE), 2,376 s at 3 workers. |
-| CP-1 baseline | **Working**: stub F1 0.837, AUC 0.899 (n=224). **Live** F1 0.933, AUC 0.984 on the 32-row frozen test split, but **0.80 ± 0.04 F1 / 0.934 AUC on host-grouped 5-fold CV** - the CV number is the generalization estimate. |
+| CP-1 data | **Stub**: 1,500 deterministic targets cached. **Live v2**: 893 real Kepler targets cached from a 900-target request (7 skipped, reasons in `cache_build.json`), 8,805 s at 3 workers, dataset `aa1bb5ca...`. **Live v1** (297 targets) is preserved as the historical split. |
+| CP-1 baseline | **Working**: stub F1 0.837, AUC 0.899 (n=224). **Live v2** F1 0.9032 (0.8148-0.9706), AUC 0.9740 on 98 primary test rows. **Live v1** F1 0.933 on 32 rows (historical). **0.80 ± 0.04 F1 / 0.934 AUC on host-grouped 5-fold CV** - the CV number is the generalization estimate. |
 | CP-2 CNN | **Working**: stub F1 0.821. **Live** F1 0.737, AUC 0.706 - underfits at 208 training rows. Honest negative result. |
-| CP-2 challenger | **Stub**: vetting-feature GBM F1 0.930, AUC 0.983 -> clears the gate. **Live**: vetting features tie the champion on F1 (0.9333) with higher AUC (0.996), so the strict gate REJECTS it; class-weight 0.929 and CNN 0.737 also fail the F1 bar. |
+| CP-2 challenger | **Stub**: vetting-feature GBM F1 0.930, AUC 0.983 -> clears the gate. **Live v2**: all four challengers REJECT - class-weight 0.8667, pre-registered Platt calibration (H-003) 0.8667, vetting features 0.8485, CNN 0.5918, against a 0.9032 champion. H-003 was falsified, not refitted. |
 | CP-2 gate | ML emits PENDING, registry-shaped `run_record.json`; `services/registry.promote()` (Member B) is still the only decision point. |
-| FREEZE | Stub rebuild reproduces dataset fingerprint `ee1f7e04226f8e7b0ca68b3bd4dd8527877bac17` and split fingerprint `303b6081ebb5002449fae5de31b30f5adb78a732`. Live: dataset `3826e7f3542eca36941d0b73bef04769f443ac0d`, split `d8aa6b9975c56f1cdda7a1c5e1a88d3780175567`, and a same-config replay reproduced every metric to 16 decimals. |
+| FREEZE | Stub rebuild reproduces dataset fingerprint `ee1f7e04226f8e7b0ca68b3bd4dd8527877bac17` and split fingerprint `303b6081ebb5002449fae5de31b30f5adb78a732`. Live v1: dataset `3826e7f3542eca36941d0b73bef04769f443ac0d`, split `d8aa6b9975c56f1cdda7a1c5e1a88d3780175567`, same-config replay reproduced every metric to 16 decimals. Live v2: dataset `aa1bb5ca19a2390cc2f6cf1a6014d100f9b15dfe`, split `7449f8b87a9319d83537246ed1bfbf07a1e2e13b` (frozen once, after the cache completed). |
 
 > **The stub rows are synthetic.** They prove the pipeline, not Kepler
 > performance. Every live number below is copied from `artifacts/*/metrics.json`.
@@ -204,6 +204,55 @@ rules for reading it are fixed here:
    data. Any of those turns the demo into a rehearsal.
 5. If no challenger keeps, the v2 champion stands and the REJECT rows ship with
 their diagnoses. A gate that only ever says yes is not a gate.
+
+### v2 re-score: what the larger cache actually bought (results, not hopes)
+
+The 900-target cache finished at **893 targets** (7 skipped: unreadable MAST data
+products, each recorded with its reason in `data/live/cache_build.json`), which
+froze a **new** split, `v2`, at `data/live/splits/v2.json`: train 625 / val 134 /
+test 134, 98 primary test rows with 31 positives. Split v1 and every v1 artifact
+are untouched - v2 is additive, created only because the cache grew, and H-003
+was pre-registered to be scored on v2 only, never on v1 rows.
+
+Dataset fingerprint `aa1bb5ca19a2390cc2f6cf1a6014d100f9b15dfe`,
+split fingerprint `7449f8b87a9319d83537246ed1bfbf07a1e2e13b`, same seed, same
+harness, same threshold rule for all five.
+
+| Run | Config | F1 (95% CI) | AUC (95% CI) | Prec | Rec | Verdict |
+|---|---|---|---|---|---|---|
+| champion | `baseline_live_v2` | **0.9032** (0.8148-0.9706) | 0.9740 (0.9432-0.9949) | 0.903 | 0.903 | champion |
+| challenger | `challenger_class_weight_live_v2` | 0.8667 (0.7619-0.9492) | 0.9740 (0.9431-0.9944) | 0.897 | 0.839 | REJECT: F1 -0.0365 |
+| challenger | `challenger_calibrated_live_v2` (**H-003, pre-registered**) | 0.8667 (0.7619-0.9492) | 0.9740 (0.9432-0.9949) | 0.897 | 0.839 | REJECT: F1 -0.0365 |
+| challenger | `challenger_vetting_features_live_v2` | 0.8485 (0.7419-0.9303) | 0.9692 (0.9352-0.9930) | 0.800 | 0.903 | REJECT: F1 -0.0547 |
+| challenger | `cnn_live_v2` | 0.5918 (0.4772-0.6981) | 0.7029 (0.6045-0.8056) | 0.433 | 0.935 | REJECT: F1 -0.3114 |
+
+Candidate-inclusive (all 134 test rows, CANDIDATE counted positive) for the
+champion: F1 0.7273 / AUC 0.8917 - reported separately, never as the headline.
+
+**Both pre-declared success criteria, scored honestly:**
+
+1. *A challenger KEEP row on real data* - **not met.** Zero of four kept. The gate
+   said no four times, on a split whose champion scores 0.90 rather than 0.93, so
+   this is not an artefact of an easy draw.
+2. *Champion F1 interval narrower than v1's 0.815-1.000* - **met.** Width 0.156
+   versus 0.185, with 98 primary rows instead of 32. More data bought precision,
+   exactly as predicted, and bought no F1.
+
+**H-003 failed, and that is the useful result.** The pre-registered fix targeted
+what CV said was the dominant loss: a threshold fitted on ~45 validation rows and
+transferred to unseen hosts. Platt calibration was fitted on the v2 validation
+split (slope 0.380, intercept -0.225, 61/134 positives) and the threshold was then
+chosen on calibrated probabilities. It did not help: threshold moved 0.5 -> 0.78
+and landed on the same confusion matrix as the uncalibrated balanced-weight model
+(64 TN, 3 FP, 5 FN, 26 TP). The calibration removed threshold *scale* ambiguity,
+not the errors. F1 loss was not a threshold-transfer problem, so the hypothesis -
+written down before any v2 number existed - is falsified rather than refitted.
+
+Read the champion number correctly: 0.9032 on 98 rows is **not** an upgrade of the
+0.80 cross-validated estimate, and the two must never be swapped in a slide. The
+98-row split is still a single draw; 0.80 on unseen host stars over all targets
+remains the generalization claim. What the v2 run adds is a champion on 3x the
+rows with a 16% tighter interval, and four rejection diagnoses instead of three.
 
 ### Uncertainty (do not quote a bare F1)
 

@@ -1,0 +1,160 @@
+ORBIT - BACKEND CHANGES AND REVIEW
+Date:    2026-10-26
+By:      Member C (ML), reviewing and unblocking Member B's B2 push (32453ca)
+Scope:   backend/requirements.txt (changed by me); B's db/ + services/ (reviewed, NOT changed)
+
+====================================================================
+1. WHAT I CHANGED, AND WHY
+====================================================================
+
+FILE: backend/requirements.txt
+
+CHANGE: added three lines under a new "Backend app" heading.
+
+    sqlmodel>=0.0.21,<1
+    SQLAlchemy>=2.0,<3
+    fastapi>=0.110,<2
+
+WHY:   B's registry and schema are real code with 43 tests, but the
+       dependencies they import were never added to requirements.txt.
+       The README's documented onboarding is:
+
+           cd backend
+           pip install -r requirements.txt
+           pytest -q
+
+       On a clean machine that ends with:
+
+           ModuleNotFoundError: No module named 'sqlmodel'
+
+       so tests/test_b2_database.py fails at collection. The tests were
+       green only in a venv where sqlmodel had been installed by hand.
+       That would have turned CI red on the first run (once ci.yml moves
+       to .github/workflows/), and a judge following the README would
+       have hit the same wall before seeing any of B's work.
+
+VERIFIED: installed sqlmodel 0.0.48 / SQLAlchemy 2.1.6 / fastapi 0.162.0
+       from the updated file, then:
+
+           tests/test_b2_database.py     43 passed
+           full suite                    113 passed, 1 skipped (no torch)
+
+       The skip is tests/test_cnn.py, which imports torch; torch is in
+       requirements.txt but was absent from this particular venv. Not a
+       regression.
+
+====================================================================
+2. REVIEW FINDINGS ON B'S PUSH (not changed - B owns this module)
+====================================================================
+
+(a) WRONG CLAIM IN AGENTS.md - FIXED IN THE DOC, NOT IN CODE
+    B wrote "B2 complete: FastAPI app" and ticked CP-1 (walking
+    skeleton). There is no FastAPI app. backend/app/ contains only:
+
+        app/db/{__init__,config,models,session}.py
+        app/services/registry.py
+
+    No main.py, no routers, no app object, no WebSocket broadcast.
+    CP-1's exit criterion is "mission in -> 1 agent reply -> panel
+    shows it", which cannot pass without an agent loop and a UI, and
+    neither exists. I corrected AGENTS.md section 1. Keep the SQLite +
+    registry claim - it is solid - and do not claim the API.
+
+(b) promote() USES Verdict.REJECT FOR OPERATIONAL FAILURES
+    In backend/app/services/registry.py, promote() returns
+    (Verdict.REJECT, reason) for four cases that are not scientific
+    rejections:
+
+        no champion exists; bootstrap required
+        challenger <id> not found
+        challenger not PENDING: <verdict>
+        already decided: ...
+
+    No row is written in those paths, so the registry stays clean. The
+    risk is at the call site: a UI or the agent loop that renders the
+    returned verdict will show "REJECT" for a missing ID or a double
+    promote, which reads as a scientific verdict and pollutes the
+    demo narrative.
+
+    SUGGESTION: raise RegistryError (or return a status enum with
+    OK / REJECTED / NOT_EVALUABLE) and reserve Verdict.REJECT for gate
+    outcomes. Cheap change, better error surface.
+
+(c) CHAMPION ORDERING IS SQLITE-SPECIFIC AND TIE-UNSTABLE
+    session.py:get_current_champion() orders by
+
+        json_extract(metrics, '$.f1') DESC
+
+    That is SQLite JSON1 SQL. It also ranks by raw F1 rather than by
+    the order decisions were made, and .limit(1) with equal F1 values
+    resolves arbitrarily - two KEEP rows with the same F1 make the
+    champion non-deterministic between reads.
+
+    SUGGESTION: order by (f1 DESC, created_at DESC, id DESC) so ties
+    are at least stable, and add a test that promotes two equal-F1
+    rows and asserts the same champion twice.
+
+(d) PENDING ROWS ARE NEVER RESOLVED - BY DESIGN, BUT DOCUMENT IT
+    promote() inserts a NEW row with id "<challenger>-keep" or
+    "<challenger>-reject" and records the link in experiment_decisions.
+    The original PENDING row keeps verdict=PENDING forever.
+
+    This is append-only and defensible, but any consumer doing
+    list_experiments(verdict=KEEP) sees synthesized rows, while a
+    naive "SELECT * FROM experiments" shows one PENDING row and one
+    verdict row for the same run. Document the join/dedupe rule next to
+    the schema in docs/BACKEND.md, or the frontend leaderboard will
+    double-count every experiment.
+
+(e) THE PUSH IS NOT LINT-CLEAN, CONTRARY TO THE AGENTS ENTRY
+    B's status block said "ruff/black clean". It is not:
+
+        ruff:  79 errors, all inside B's files
+               35 app/db/models.py     32 tests/test_b2_database.py
+                7 app/db/session.py     2 app/services/registry.py
+                2 app/db/config.py      1 app/db/__init__.py
+        black: 6 files would be reformatted, incl. app/db/models.py
+               and tests/test_b2_database.py
+
+    Breakdown: 26x UP045 (Optional[X] -> X | None), 17x I001 (import
+    order), 16x F401 (unused imports), 6x F841 (unused locals),
+    5x B017, 4x UP042, 3x UP035, 1x UP037, 1x F821. 62 of the 79 are
+    auto-fixable.
+
+    I did NOT run ruff --fix or black on those files. Formatting
+    someone else's module behind their back hides the fact that it
+    was never run, and this repo's rule is "CI enforces, no debates" -
+    which means B should run it. It is a two-command fix:
+
+        cd backend && ruff check --fix . && black .
+
+    Two of the findings are not just cosmetic, and are worth reading
+    before auto-fixing:
+
+    - F821 at app/db/session.py:86 - the return annotation
+      "Experiment | None" on get_current_champion() refers to a name
+      imported inside the function body. Harmless at runtime (a string
+      annotation is never evaluated) but it breaks any
+      typing.get_type_hints() caller. Move the import to module level
+      or use a TYPE_CHECKING block.
+
+    - F841 x5 in tests/test_b2_database.py - `attempt` is assigned at
+      lines 394, 426, 457, 487 and never read, plus `exp_a`/`exp_b` at
+      878/885. Those tests create attempt rows and then do not assert
+      anything about them. The tests pass, but they are weaker than
+      their names suggest: the attempt bookkeeping is unverified.
+
+(f) NOT VERIFIED BY ME
+    Concurrency: the BEGIN IMMEDIATE path is unit-tested sequentially.
+    I did not run parallel promote() calls against one SQLite file.
+    If there is time before the demo, one test with two threads
+    promoting the same challenger would prove the "atomic" claim
+    rather than assert it.
+
+====================================================================
+3. WHAT I DID NOT TOUCH
+====================================================================
+
+No file under backend/app/ was modified. The schema, registry logic and
+43 tests are B's, and they pass as pushed. Section 2 is a review to act
+on, not a patch I applied behind B's back.

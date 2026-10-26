@@ -11,5 +11,12 @@ joblib>=1.3,<2
 --extra-index-url https://download.pytorch.org/whl/cpu
 torch>=2.2,<3
 
+# Backend app: SQLite schema, registry, API (see docs/BACKEND.md).
+# The registry tests (tests/test_b2_database.py) need these, so they ship in the
+# same install the README tells everyone to run.
+sqlmodel>=0.0.21,<1
+SQLAlchemy>=2.0,<3
+fastapi>=0.110,<2
+
 # Tests
 pytest>=8,<9

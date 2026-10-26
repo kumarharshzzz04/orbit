@@ -20,13 +20,14 @@ data. None of it is a slide claim.
 
 | Claim | Evidence | Check it |
 |---|---|---|
-| **Real data, fingerprinted** | 9,564 KOI labels from the NASA Exoplanet Archive (TAP fetch writes SHA-1 + timestamp beside the CSV), 297 live Kepler light curves from MAST, frozen host-grouped split with its own fingerprint | [docs/ML.md](docs/ML.md) §Data, `ml_sandbox/splits.py` |
+| **Real data, fingerprinted** | 9,564 KOI labels from the NASA Exoplanet Archive (TAP fetch writes SHA-1 + timestamp beside the CSV), **893 live Kepler light curves** from MAST, two frozen host-grouped splits each with its own fingerprint | [docs/ML.md](docs/ML.md) §Data, `ml_sandbox/splits.py` |
 | **Scale checked on the whole catalog** | 9,564 targets / 8,214 host stars, host-grouped 5-fold, primary truth: **F1 0.883 ± 0.017, AUC 0.971 ± 0.005** | [runs/evidence/catalog_full_cv.json](runs/evidence/catalog_full_cv.json), `python -m ml_sandbox.catalog_cv` |
 | **Honest generalization number** | Folded-pixel champion on unseen hosts: **F1 0.801 ± 0.036, AUC 0.934 ± 0.030**. The 0.933 frozen-split figure is only ever quoted beside it | [docs/ML.md](docs/ML.md) §Second estimate |
 | **Errors diagnosed, not hidden** | 48% of out-of-fold false positives (12/25) carry the archive's centroid-blend flag; both frozen-split FPs are confirmed blends at 8.52″ and 3.69″ | [docs/ML.md](docs/ML.md) §pixel-level diagnostic |
-| **A gate that rejects** | Vetting-feature, class-weight and CNN challengers were all **REJECT** against the champion, with diagnoses; `promote()` is the only thing allowed to change the champion | [runs/](runs), [AGENTS.md](AGENTS.md) §3.2 |
-| **Pre-registered, not post-hoc** | The Platt-calibration challenger (H-003) was written **before** split v2 existed and has never been scored on v1 test rows | [runs/challenger_calibrated_live.json](runs/challenger_calibrated_live.json) |
-| **Reproducible by construction** | Every run records config hash, seed, git commit, dataset and split fingerprints; 73 tests cover leakage, determinism, the CLI contract and replay | `pytest -q` |
+| **A gate that rejects** | **Four of four** challengers **REJECT** on the 893-target split v2 - vetting features 0.8485, class-weight 0.8667, calibration 0.8667, CNN 0.5918 against a 0.9032 champion - each with a written diagnosis; `promote()` is the only thing allowed to change the champion | [docs/ML.md](docs/ML.md) §v2 re-score, [runs/](runs) |
+| **Pre-registered, then falsified** | The Platt-calibration challenger (H-003) was written **before** split v2 existed, was never scored on v1 test rows, and came back **REJECT** with the number attached | [runs/challenger_calibrated_live.json](runs/challenger_calibrated_live.json), [docs/ML.md](docs/ML.md) §v2 pre-registration |
+| **More data bought precision, not F1** | 32 → 98 primary test rows; champion's 95% F1 interval tightened 0.185 → 0.156 wide, F1 moved 0.933 → 0.903. Stated as the prediction it was, then scored | [docs/ML.md](docs/ML.md) §v2 re-score |
+| **Reproducible by construction** | Every run records config hash, seed, git commit, dataset and split fingerprints; **114 tests** cover leakage, determinism, the CLI contract, replay, the gate and atomic promotion | `pytest -q` |
 | **NVIDIA GPU path, measured** | CUDA CNN: 11.97 s → 2.36 s training (**5.1×**), identical F1; CPU stays default so existing hashes replay | [docs/ML.md](docs/ML.md) §NVIDIA GPU path |
 
 ### The scale question, answered with a number
@@ -53,27 +54,33 @@ build — nothing in this README pretends they exist yet.
 
 | Module | Owner | State |
 |---|---|---|
-| ML sandbox + eval harness (`backend/ml_sandbox/`) | C | **Evidence complete** — 297 live targets on a frozen split, 1,500-target stub cache, 900-target live cache building (resumable), 73 tests, full-catalog scale check |
-| FastAPI app, SQLite, registry, CI (`backend/app/`) | B | Not started — start at [docs/BACKEND.md](docs/BACKEND.md) |
-| Agent orchestrator + prompts (`backend/app/services/`) | A | Not started — start at [docs/AGENTS_SYSTEM.md](docs/AGENTS_SYSTEM.md) |
+| ML sandbox + eval harness (`backend/ml_sandbox/`) | C | **Evidence complete** — 893 live targets on frozen split v2 (900 requested, 7 unreadable products skipped), 1,500-target stub cache, 114 tests, full-catalog scale check, four REJECT rows |
+| SQLite schema + experiment registry (`backend/app/db/`, `services/registry.py`) | B | **Landed, 43 tests passing** — 8 tables, `promote()`/`bootstrap_champion()`, atomic `BEGIN IMMEDIATE` promotion, durable REJECT on bootstrap. FastAPI routers, `main.py` and the WS broadcast are **not** built yet |
+| Agent orchestrator + six-agent loop (`backend/app/`) | A | Not started — start at [docs/AGENTS_SYSTEM.md](docs/AGENTS_SYSTEM.md) |
 | React mission control (`frontend/`) | D | Not started — start at [docs/FRONTEND.md](docs/FRONTEND.md) |
 
-`ci.yml` at the repo root is the workflow B installs at `.github/workflows/ci.yml` once
-`backend/app/` and `frontend/` exist. It is intentionally not active yet — it would only be red.
+CP-1's exit test - "mission in, one agent reply, panel shows it" - is **not** met: there is no
+agent loop and no panel. The DB and registry exist; the product above them does not.
+
+`ci.yml` at the repo root is the workflow B installs at `.github/workflows/ci.yml` once the
+app has a `main.py` and `frontend/` exists. It is intentionally not active yet — it would only be red.
 
 ### The limitations, stated by us first
 
-- **0.933 is one 32-row draw.** Cross-validation over all 297 targets gives 0.80 F1. Anyone
-  quoting 0.933 alone is quoting the split, not the model.
+- **0.933 (v1) and 0.9032 (v2) are single draws**, 32 and 98 rows. Cross-validation over the
+  population gives 0.80 F1. Anyone quoting a split number alone is quoting the split, not
+  the model.
 - **The residual error is pixel-level, not photometric.** 12 of 25 out-of-fold false
   positives are blends that need centroid motion or difference imaging, which this pipeline
   does not ingest. More of the same photons will narrow intervals, not lift F1.
 - **CANDIDATE labels are excluded from the primary metric** (2,000+ uncertain rows) and
   reported separately instead of being counted as positives.
 - **Kepler only.** TESS is not implemented.
-- **The sample is 297 light curves, not 900 and not 9,564.** The catalog check covers the
-  archive's scale; the light-curve cache is a resumable subset chosen by download budget,
-  and the README says so rather than implying otherwise.
+- **The sample is 893 light curves, not 9,564.** The catalog check covers the archive's
+  scale; the light-curve cache is the subset that survived download (7 MAST products were
+  unreadable and are listed with reasons, not silently dropped).
+- **0.9032 is one 98-row draw.** It is not a revision of the 0.80 cross-validated estimate
+  and is never quoted without it.
 
 ## Start here
 
@@ -95,7 +102,7 @@ Then follow your module:
 | A (agents) | `docs/AGENTS_SYSTEM.md` | `docs/fixtures/proposal.example.json` | A mission produces a proposal, Skeptic verdict, Experimenter run and Evaluator verdict |
 | B (backend) | `docs/BACKEND.md` | `docs/fixtures/registry_rows.example.json` | `run_record.json` is inserted append-only and `promote()` changes the champion |
 | D (frontend) | `docs/FRONTEND.md` | `docs/fixtures/ws_events.jsonl` | Replaying the fixture renders the debate, leaderboard and KEEP chip; then swap in the real socket |
-| C (ML) | `docs/ML.md` | `runs/*.json` | Live cache scored on the frozen split; tuning stays validation-only |
+| C (ML) | `docs/ML.md` | `runs/*.json` | Live cache scored on frozen split v2; tuning stays validation-only |
 
 Full handoff block with commands and traps: [HANDOVER.md](HANDOVER.md). The shared mock
 stream, registry rows and proposal live under [docs/fixtures](docs/fixtures).
@@ -146,7 +153,7 @@ python -m ml_sandbox.stability --predictions ../artifacts/baseline_live/predicti
 # 5. full-catalog scale check (needs a cached KOI table; writes runs/evidence/)
 python -m ml_sandbox.catalog_cv
 
-# 6. tests (leakage, determinism, CLI contract, replay, gate, stability) - 73 tests
+# 6. tests (leakage, determinism, CLI contract, replay, gate, stability) - 114 tests
 pytest -q
 ```
 
@@ -175,11 +182,12 @@ python -m ml_sandbox.build_cache --mode live --targets 900 --workers 3
 python -m ml_sandbox.train --config ../runs/baseline_live.json --out ../artifacts/live-baseline
 ```
 
-The frozen live split is 297 real Kepler targets (300 requested, 3 skipped). Champion:
-F1 0.933 / AUC 0.984 on the 32-row primary test split, **0.801 / 0.934 cross-validated over
-all 297** — full numbers and caveats in [docs/ML.md](docs/ML.md). A 900-target cache is
-building with a resumable manifest; `bash data/resume.sh` restarts it idempotently and
-refuses to start a second downloader.
+The live cache holds **893 real Kepler targets** (900 requested, 7 MAST products skipped
+with reasons in `data/live/cache_build.json`). Champion on frozen split v2: **F1 0.9032
+(0.8148-0.9706) / AUC 0.9740** on 98 primary test rows; **0.801 / 0.934 cross-validated**
+remains the generalization estimate — full numbers and caveats in [docs/ML.md](docs/ML.md).
+`bash data/resume.sh` restarts the downloader and the v2 scorer idempotently and refuses
+to start a second one.
 
 Downloads are process-isolated (`--workers 3`): astroquery is not thread-safe. Targets
 sharing a host star reuse one download, since KOI rows are planets rather than stars.
@@ -190,7 +198,7 @@ exercise, not a method one.
 
 ```bash
 cd backend
-pytest -q                                    # 73 tests, no network
+pytest -q                                    # 114 tests, no network
 python -m ml_sandbox.catalog_cv              # 9,564-row scale check -> runs/evidence/
 python -m ml_sandbox.train --config ../runs/baseline_live.json --out ../artifacts/live-baseline
 ```

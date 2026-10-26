@@ -1,0 +1,119 @@
+ORBIT - AGENT-SIDE CHANGES AND REVIEW
+Date:    2026-10-26
+By:      Member C (ML)
+Scope:   AGENTS.md section 1 (changed by me); docs/AGENTS_SYSTEM.md contract (unchanged)
+
+====================================================================
+1. WHAT I CHANGED, AND WHY
+====================================================================
+
+FILE: AGENTS.md, section 1 "Current State"
+
+The block had drifted from the repository in three ways. AGENTS.md is
+the file every human and AI session is told to read first, so a stale
+block is worse than no block - it makes the next person build against a
+system that does not exist.
+
+CHANGE 1 - CP-1 un-ticked.
+    Was: [x] walking skeleton (CP-1)
+    Now: [ ] walking skeleton (CP-1)
+
+    WHY: CP-1's exit criterion is "mission in -> 1 agent reply -> panel
+    shows it; baseline trains". The baseline trains, but there is no
+    orchestrator, no agent reply and no panel. Only the baseline half
+    of CP-1 is true. Ticking it told the team the integration gate was
+    cleared when it was not, which is exactly the thing that blows up
+    on demo day. AGENTS.md section 6 defines CP-1 as a hard gate; a
+    gate that is recorded as passed without passing is worse than a
+    gate that is honest and red.
+
+CHANGE 2 - "B2 complete: FastAPI app" corrected.
+    Now: describes what actually landed (SQLite schema, 8 tables,
+    promote()/bootstrap_champion(), gate evaluation, atomic BEGIN
+    IMMEDIATE promotion, durable REJECT on bootstrap, 43 registry
+    tests) and states explicitly that there is no FastAPI app object,
+    no routers and no WS broadcast - only app/db/ and
+    app/services/registry.py.
+
+    WHY: backend/app/ was inspected file by file. There is no main.py
+    and no route anywhere. The WS contract in AGENTS.md section 3.1 is
+    unchanged and still unimplemented; anyone reading "FastAPI app:
+    done" would have started the frontend against an API that does not
+    answer.
+
+CHANGE 3 - ML numbers brought to the real, final state.
+    Was: 297 live targets, champion F1 0.933 on a 32-row split, cache
+    "downloading (66%, 597/900)", v2 "armed".
+    Now: live cache 893 targets (900 requested, 7 unreadable MAST
+    products skipped with reasons), split v2 frozen at 625/134/134,
+    champion F1 0.9032 (0.8148-0.9706) / AUC 0.9740 on 98 primary test
+    rows, all four challengers REJECT, generalization estimate still
+    F1 0.80 +/- 0.04 / AUC 0.934 from host-grouped CV.
+
+    WHY: the download and the v2 re-score both finished on 2026-10-25
+    at 19:13. The block was still describing a running process. Also
+    added the one result that matters most for credibility: the
+    pre-registered H-003 calibration challenger was scored and REJECTED
+    (0.8667 vs 0.9032). A pre-registration that ends in a rejection is
+    the strongest evidence in the repo that the gate is not theatre,
+    so it belongs in the state block, not only in docs/ML.md.
+
+CHANGE 4 - DEMO RISK rewritten to the current truth.
+    Now names CP-1 as unmet, warns that 0.9032 and 0.933 are split
+    numbers that must never travel without the 0.80 CV figure, and
+    notes that ci.yml is still at the repo root so nothing is actually
+    enforced in CI.
+
+    WHY: the old risk line referred to "297 of 1,500 targets", which is
+    no longer the state, and it did not mention that CP-1 is open - the
+    single biggest risk to the demo.
+
+CHANGE 5 - NEXT UP reassigned to match reality.
+    B: main.py + routers -> registry, WS broadcast, move ci.yml to
+    .github/workflows/. A: orchestrator loop + prompts + NIM/Nemotron
+    connector. D: Vite UI against docs/fixtures/ws_events.jsonl.
+    C: done - hand B the v2 run_record.json rows for registry seeding.
+
+    WHY: C's open item ("900-target cache download") is finished, and
+    B's "wire FastAPI routers" cannot start until a main.py exists.
+
+====================================================================
+2. AGENT MODULE STATUS - NOTHING WAS BUILT, SO NOTHING WAS FIXED
+====================================================================
+
+There is no agent code in the repository. Nothing under backend/app/
+imports an LLM, opens a WebSocket, or runs a round. The only
+agent-shaped artifacts are the contract and the fixtures:
+
+    docs/AGENTS_SYSTEM.md          six-agent spec, prompts, loop
+    docs/fixtures/ws_events.jsonl  replayable sample stream
+    docs/fixtures/proposal.example.json
+    AGENTS.md section 3.1          WS event schema (A owns sign-off)
+
+I did not change the WS event schema or any fixture. AGENTS.md section
+5 rule 4 forbids changing section 3.1 without A's sign-off and a
+frontend update in the same PR, and no such need came up: the schema is
+still implementable as written.
+
+WHAT THE FIRST AGENT SESSION SHOULD KNOW
+    - The registry is ready to receive: insert_experiment() takes a
+      run_record.json dict straight from ml_sandbox.train, and
+      artifacts/*_v2/run_record.json already exist in a shape it
+      accepts (id, hypothesis_id, config_hash, seed, git_commit,
+      dataset_fingerprint, split_fingerprint, metrics, artifact_path,
+      replayable, threshold, training, split_sizes...).
+    - The orchestrator must emit run_progress/run_metrics/verdict
+      events from the ML sandbox's stderr lines, which are already
+      prefixed "ORBIT_PROGRESS {...}" for exactly this purpose. Do not
+      ask the sandbox to change its stdout contract.
+    - CP-1 does not need the whole loop. It needs one mission, one
+      agent reply and one panel. Build that first and tick the gate
+      honestly; the six-agent debate is CP-2 work.
+
+====================================================================
+3. CONTRACT STATUS (unchanged, still binding)
+====================================================================
+
+WebSocket event schema (AGENTS.md 3.1): unchanged, not implemented.
+Registry row shape (3.2):      unchanged; B's table is a superset.
+ML sandbox CLI (3.3):          unchanged; 893-target v2 runs conform.
